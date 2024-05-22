@@ -3,7 +3,7 @@ from utils import mid, K_o, K_w
 from scipy.sparse import dok_matrix
 
 
-def calc_p(cells):
+def calc_pressure(cells):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКЭ)
     """
@@ -18,11 +18,10 @@ def calc_p(cells):
 
         else:
             # TODO попробовать переписать векторно
-            KwKo_i = K_o(i) + K_w(i)
-            A[i, i + 1] = - Wo[i] * mid(KwKo_i, K_o(i + 1) + K_w(i + 1)) * area / hx
-            A[i, i - 1] = -Wo[i] * mid(KwKo_i, K_o(i - 1) + K_w(i - 1)) * area / hx
-            A[i, i + Nx - 1] = -Wo[i] * mid(KwKo_i, K_o(i + Nx - 1) + K_w(i + Nx - 1)) * area / hy
-            A[i, i - Nx + 1] = -Wo[i] * mid(KwKo_i, K_o(i - Nx + 1) + K_w(i - Nx + 1)) * area / hy
+            A[i, i + 1] = - Wo[i] * mid(i, i + 1) * area / hx
+            A[i, i - 1] = -Wo[i] * mid(i, i - 1) * area / hx
+            A[i, i + Nx - 1] = -Wo[i] * mid(i, i + Nx - 1) * area / hy
+            A[i, i - Nx + 1] = -Wo[i] * mid(i, i - Nx + 1) * area / hy
             A[i, i] = - A[i, i + 1] - A[i, i - 1] - A[i, i + Nx - 1] - A[i, i - Nx + 1]
 
             # Create a rhs
@@ -30,7 +29,7 @@ def calc_p(cells):
 
     # Добавили скважины
     b[0] += Wo[0] * qw * volume[0]
-    b[-1] -= qo * volume[-1]
+    b[-1] += qo * volume[-1]
 
     # Solve the system of linear equations
     p[:] = np.linalg.solve(A.A, b)
