@@ -6,9 +6,9 @@ def mid(x, y):
     return 2 * x * y / (x + y)
 
 
-def K_o(idx):
-    return k[idx] * pf_o(S[idx]) / mu_o[idx]
+def K_o(idx: int):
+    return k[idx] * pf_o(S[idx]) / mu_o
 
 
-def K_w(idx):
-    return k[idx] * pf_w(S[idx]) / mu_w[idx]
+def K_w(idx: int):
+    return k[idx] * pf_w(S[idx]) / mu_w

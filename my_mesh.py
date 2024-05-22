@@ -7,7 +7,7 @@ def create_mesh():
     # Создание регулярной сетки
     x = np.linspace(X_min, X_max, Nx)
     y = np.linspace(Y_min, Y_max, Ny)
-    xx, yy, zz = np.meshgrid(x, y, 1)
+    xx, yy, zz = np.meshgrid(x, y, 17)
 
     # Преобразование координат сетки в массив вершин
     points = np.vstack([xx.ravel(), yy.ravel(), zz.ravel()]).T
