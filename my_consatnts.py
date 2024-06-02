@@ -18,20 +18,24 @@ S_min = 0.18
 S_max = 0.7
 mu_o = 0.006  # вязкость нефти при 20 гр [Pa*c]
 mu_w = 0.001  # вязкость воды при 20 гр [Pa*c]
+ro_w = 1000  # плотность воды
+ro_o = 860  # плотность нефти
+ro_p = 900  # плотность парафина
 
-qw = 50 / 1000  # дебит воды [кг/сут]
-qo = -1000 / 860  # дебит нефти [кг/сут]
-p = np.zeros(N_elements)  # давление
-S = np.zeros(N_elements)  # Водонасыщенность
-Wo = np.ones(N_elements)  # Массовая доля маслянного компонента в нефти
-Wo_0 = np.ones(N_elements)
-Wp = np.zeros(N_elements)  # Массовая доля растворенного парафина в нефти
-Wps = np.zeros(N_elements)  # Массовая доля взвешенного парафина в нефти
-k = np.ones(N_elements) * 3 * 10**-14  # проницаемость [m^2]
-m = np.ones(N_elements) * 0.3  # пористость
-m_0 = np.ones(N_elements) * 0.3
-volume = np.ones(N_elements) * area  # объем элемента h=1
-
+qw = 50 / ro_w  # дебит воды [кг/сут]
+qo = -100 / ro_o  # дебит нефти [кг/сут]
+p = np.zeros(N_elements, dtype=np.float64)  # давление
+S = np.zeros(N_elements, dtype=np.float64)  # Водонасыщенность
+Wo = np.ones(N_elements, dtype=np.float64)  # Массовая доля маслянного компонента в нефти
+Wo_0 = np.ones(N_elements, dtype=np.float64)
+Wp = np.zeros(N_elements, dtype=np.float64)  # Массовая доля растворенного парафина в нефти
+Wps = np.zeros(N_elements, dtype=np.float64)  # Массовая доля взвешенного парафина в нефти
+k = np.ones(N_elements, dtype=np.float64) * 3 * 10**-14  # проницаемость [m^2]
+#  from decimal import Decimal
+m = np.ones(N_elements, dtype=np.float64) * 0.3  # пористость
+m_0 = np.ones(N_elements, dtype=np.float64) * 0.3
+volume = np.ones(N_elements, dtype=np.float64) * area  # объем элемента h=1
+R = np.zeros(N_elements, dtype=np.float64)  # концентрация взвешенного парафина
 
 # Граничные условия пласта
 p_bound = 1e7

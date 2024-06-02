@@ -3,7 +3,9 @@ from utils import up, mid, K_o, K_w
 
 
 def calc_saturation(cells):
-
+    """
+    Вычисление водонасыщенности по явной схеме
+    """
     for i, elem in enumerate(cells):
         if (i < Nx-1) or (i % (Nx-1) == 0) or ((i+1) % (Nx-1) == 0) or (i > (Ny-2) * (Nx-1)):
             S[i] = 1  # TODO ГУ !!!!!
