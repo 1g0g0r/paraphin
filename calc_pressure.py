@@ -11,11 +11,11 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКЭ)
     """
+    N = (nx + 2) * (ny + 2)
 
     @ti.kernel
     def build_matrix():
         # Создаем разреженную матрицу
-        N = (nx + 2) * (ny + 2)
         A = sp.lil_matrix((N, N))
 
         for i in range(nx + 2):
@@ -34,8 +34,6 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
 
     @ti.kernel
     def build_rhs() -> np.ndarray:
-        # Создаем разреженную матрицу
-        N = (nx + 2) * (ny + 2)
         b = np.zeros(N)
 
         for i in range(nx + 2):
