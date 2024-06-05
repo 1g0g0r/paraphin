@@ -1,6 +1,6 @@
 import pyvista as pv
 from meshpy.tet import MeshInfo, build
-from my_consatnts import *
+from constants import *
 
 
 def create_mesh():

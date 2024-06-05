@@ -1,24 +1,21 @@
 import numpy as np
 
-from my_consatnts import *
-from my_mesh import create_mesh
-from calc_pressure import calc_pressure
-from calc_saturation import calc_saturation
+from constants import dT
+from solver import Solver
 
 
 def solve():
-    # Создали сетку
-    points, cells = create_mesh()
-
+    sol = Solver()
+    sol.initialize()
     # Задать начальные условия
 
-    time = np.linspace(0, 1, 1/dt)
+    time = np.linspace(0, 1, 1/dT)
     for t in time:
         # Решение уравнения давления
-        calc_pressure(cells)
+        sol.update_p()
 
         # Решение уравнения насыщенности
-        calc_saturation(cells)
+        print("все будет хорошо")
 
 
 if __name__ == '__main__':

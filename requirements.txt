@@ -5,3 +5,4 @@ scipy
 meshpy
 pyvista
 pyvtk
+taichi

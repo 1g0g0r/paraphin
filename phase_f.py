@@ -1,4 +1,4 @@
-from my_consatnts import *
+from constants import *
 
 
 def pf_o(s):

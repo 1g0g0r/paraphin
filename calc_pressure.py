@@ -1,35 +1,69 @@
-from my_consatnts import *
-from utils import mid, K_o, K_w
-from scipy.sparse import dok_matrix
+import numpy as np
+import taichi as ti
+
+from utils import mid
+from constants import *
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
 
 
-def calc_pressure(cells):
+def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКЭ)
     """
-    # Создаем разреженную матрицу
-    A = dok_matrix((N_elements, N_elements))
-    b = np.zeros(N_elements)
+    Wo_np, k_np, S_np = Wo.to_numpy(), k.to_numpy(), S.to_numpy()
+    Wo_0_np, m_np, m_0_np, p_np = Wo_0.to_numpy(), m.to_numpy(), m_0.to_numpy(), p.to_numpy()
 
-    for i, elem in enumerate(cells):
-        if (i < Nx-1) or (i % (Nx-1) == 0) or ((i+1) % (Nx-1) == 0) or (i > (Ny-2) * (Nx-1)):
-            A[i, i] = 1
-            p[i] = p_bound
+    @ti.kernel
+    def build_matrix():
+        # Создаем разреженную матрицу
+        N = (nx + 2) * (ny + 2)
+        A = sp.lil_matrix((N, N))
 
-        else:
-            # TODO попробовать переписать векторно
-            A[i, i + 1] = - Wo[i] * mid(i, i + 1) * area / hx
-            A[i, i - 1] = -Wo[i] * mid(i, i - 1) * area / hx
-            A[i, i + Nx - 1] = -Wo[i] * mid(i, i + Nx - 1) * area / hy
-            A[i, i - Nx + 1] = -Wo[i] * mid(i, i - Nx + 1) * area / hy
-            A[i, i] = - A[i, i + 1] - A[i, i - 1] - A[i, i + Nx - 1] - A[i, i - Nx + 1]
+        for i in range(nx + 2):
+            for j in range(ny + 2):
+                idx = i * (ny + 2) + j
+                if 1 <= i <= nx and 1 <= j <= ny:
+                    A[idx, idx + 1] = - Wo[i + 1, j] * mid(i, j, i + 1, j, k, S) * area / hx
+                    A[idx, idx - 1] = -Wo[i - 1, j] * mid(i, j, i - 1, j, k, S) * area / hx
+                    A[idx, idx + Nx - 2] = -Wo[i, j - 1] * mid(i, j, i, j + 1, k, S) * area / hy
+                    A[idx, idx - Nx + 2] = -Wo[i + 1] * mid(i, j, i, j - 1, k, S) * area / hy
+                    A[idx, idx] = - A[i, i + 1] - A[i, i - 1] - A[i, i + Nx - 1] - A[i, i - Nx + 1]
+                else:
+                    A[idx, idx] = 1  # For boundary points, set diagonal to 1 (Neumann BC)
 
-            # Create a rhs
-            b[i] = Wo[i] * (m[i] - m_0[i]) / dt * volume[i] + (1 - S[i]) * m[i] * volume[i] * (Wo[i] - Wo_0[i]) / dt
+        return A.tocsr()
 
-    # Добавили скважины
-    b[0] += Wo[0] * qw * volume[0]
-    b[-1] += qo * volume[-1]
+    @ti.kernel
+    def build_rhs() -> np.ndarray:
+        # Создаем разреженную матрицу
+        N = (nx + 2) * (ny + 2)
+        b = np.zeros(N)
 
-    # Solve the system of linear equations
-    p[:] = np.linalg.solve(A.A, b)
+        for i in range(nx + 2):
+            for j in range(ny + 2):
+                idx = i * (ny + 2) + j
+                if 1 <= i <= nx and 1 <= j <= ny:
+                    b[idx] = Wo[i, j] * (m[i, j] - m_0[i, j]) / dT * volume + (1 - S[i, j]) * m[i, j] * volume * (
+                                Wo[i, j] - Wo_0[i, j]) / dT
+                else:
+                    if j == 0:
+                        b[idx] = p[i, j + 1]
+                    if j == ny + 1:
+                        b[idx] = p[i, j - 1]
+                    if i == 0:
+                        b[idx] = p[i + 1, j]
+                    if i == nx + 1:
+                        b[idx] = p[i - 1, j]
+
+        # Добавили скважины в точки (1,1) (nx+1, ny+1)
+        b[ny + 2] += Wo[0] * qw * volume
+        b[(nx + 1) * (ny + 2) + (ny + 1)] += qo * volume
+
+        return b
+
+    A = build_matrix(nx, ny, Wo_np, k_np, S_np)
+    b = build_rhs(nx, ny, Wo_np, Wo_0_np, m_np, m_0_np, p_np, S_np)
+    p_new = spla.spsolve(A, b).reshape((nx + 2, ny + 2))
+
+    return p_new[1:-1, 1:-1]

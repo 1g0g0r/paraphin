@@ -1,4 +1,4 @@
-from my_consatnts import *
+from constants import *
 from utils import up, mid, K_o, K_w
 
 
