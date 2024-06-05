@@ -11,8 +11,6 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКЭ)
     """
-    Wo_np, k_np, S_np = Wo.to_numpy(), k.to_numpy(), S.to_numpy()
-    Wo_0_np, m_np, m_0_np, p_np = Wo_0.to_numpy(), m.to_numpy(), m_0.to_numpy(), p.to_numpy()
 
     @ti.kernel
     def build_matrix():
@@ -62,8 +60,8 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
 
         return b
 
-    A = build_matrix(nx, ny, Wo_np, k_np, S_np)
-    b = build_rhs(nx, ny, Wo_np, Wo_0_np, m_np, m_0_np, p_np, S_np)
+    A = build_matrix()
+    b = build_rhs()
     p_new = spla.spsolve(A, b).reshape((nx + 2, ny + 2))
 
     return p_new[1:-1, 1:-1]
