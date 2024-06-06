@@ -9,7 +9,7 @@ def solve():
     sol.initialize()
     # Задать начальные условия
 
-    time = np.linspace(0, 1, 1/dT)
+    time = np.linspace(0, 1, int(1/dT))
     for t in time:
         # Решение уравнения давления
         sol.update_p()

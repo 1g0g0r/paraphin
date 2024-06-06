@@ -13,19 +13,22 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
     """
     N = (nx + 2) * (ny + 2)
 
-    @ti.kernel
+    Wo_np, Wo_0_np, m_np, m_0_np, k_np, S_np, p_np = Wo.to_numpy(), Wo_0.to_numpy(), m.to_numpy(), \
+        m_0.to_numpy(), k.to_numpy(), S.to_numpy(), p.to_numpy()
+
+    # @ti.kernel
     def build_matrix():
         # Создаем разреженную матрицу
-        A = sp.lil_matrix((N, N))
+        A = ti.sparse.SparseMatrix((N, N), dtype=ti.f32)
 
         for i in range(nx + 2):
             for j in range(ny + 2):
                 idx = i * (ny + 2) + j
                 if 1 <= i <= nx and 1 <= j <= ny:
-                    A[idx, idx + 1] = - Wo[i + 1, j] * mid(i, j, i + 1, j, k, S) * area / hx
-                    A[idx, idx - 1] = -Wo[i - 1, j] * mid(i, j, i - 1, j, k, S) * area / hx
-                    A[idx, idx + Nx - 2] = -Wo[i, j - 1] * mid(i, j, i, j + 1, k, S) * area / hy
-                    A[idx, idx - Nx + 2] = -Wo[i + 1] * mid(i, j, i, j - 1, k, S) * area / hy
+                    A[idx, idx + 1] = - Wo_np[i + 1, j] * mid(i, j, i + 1, j, k_np, S_np) * area / hx
+                    A[idx, idx - 1] = -Wo_np[i - 1, j] * mid(i, j, i - 1, j, k_np, S_np) * area / hx
+                    A[idx, idx + Nx - 2] = -Wo_np[i, j - 1] * mid(i, j, i, j + 1, k_np, S_np) * area / hy
+                    A[idx, idx - Nx + 2] = -Wo_np[i, j + 1] * mid(i, j, i, j - 1, k_np, S_np) * area / hy
                     A[idx, idx] = - A[i, i + 1] - A[i, i - 1] - A[i, i + Nx - 1] - A[i, i - Nx + 1]
                 else:
                     A[idx, idx] = 1  # For boundary points, set diagonal to 1 (Neumann BC)
@@ -33,8 +36,10 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
         return A.tocsr()
 
     @ti.kernel
-    def build_rhs() -> np.ndarray:
+    def build_rhs():
         b = np.zeros(N)
+        # x = ti.ndarray((5,), dtype=ti.f32)
+        # x.fill(1.0)
 
         for i in range(nx + 2):
             for j in range(ny + 2):

@@ -5,6 +5,7 @@ from calc_pressure import calc_pressure
 
 # Инициализация Taichi
 ti.init(arch=ti.cpu)
+# TODO сравнить с gpu
 
 
 @ti.data_oriented
