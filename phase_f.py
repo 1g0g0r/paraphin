@@ -1,6 +1,9 @@
+import taichi as ti
+
 from constants import *
 
 
+@ti.func
 def pf_o(s):
     """
     Функция отностельной фазовой проницаемости нефти
@@ -9,6 +12,7 @@ def pf_o(s):
     return ((s - S_min)/(S_max-S_min)) ** 2/mu_o
 
 
+@ti.func
 def pf_w(s):
     """
     Функция отностельной фазовой проницаемости воды
