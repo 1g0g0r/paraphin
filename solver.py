@@ -2,6 +2,7 @@ import taichi as ti
 
 from constants import *
 from calc_pressure import calc_pressure
+from calc_saturation import calc_saturation
 
 # Инициализация Taichi
 ti.init(arch=ti.cpu)
@@ -46,3 +47,6 @@ class Solver:
     def update_p(self):
         self.p = calc_pressure(self.nx, self.ny, self.Wo, self.Wo_0,
                                self.m, self.m_0, self.k, self.S, self.p)
+
+    def update_s(self):
+        self.S = calc_saturation

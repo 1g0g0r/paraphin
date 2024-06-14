@@ -1,4 +1,3 @@
-import numpy as np
 import taichi as ti
 
 from utils import mid
@@ -19,15 +18,15 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
             for j in range(ny + 2):
                 idx = i * (ny + 2) + j
                 if 1 <= i <= nx and 1 <= j <= ny:
-                    a1 = Wo[i + 1, j] * mid(k[i, j], S[i, j], k[i + 1, j], S[i + 1, j]) * area / hx
-                    a2 = Wo[i - 1, j] * mid(k[i, j], S[i, j], k[i - 1, j], S[i - 1, j]) * area / hx
-                    a3 = Wo[i, j - 1] * mid(k[i, j], S[i, j], k[i, j + 1], S[i, j + 1]) * area / hy
-                    a4 = Wo[i, j + 1] * mid(k[i, j], S[i, j], k[i, j - 1], S[i, j - 1]) * area / hy
-                    A[idx, idx + 1] -= a1
-                    A[idx, idx - 1] -= a2
-                    A[idx, idx + Nx - 2] -= a3
-                    A[idx, idx - Nx + 2] -= a4
-                    A[idx, idx] += (a1 + a2 + a3 + a4)
+                    p1 = Wo[i + 1, j] * mid(k[i, j], S[i, j], k[i + 1, j], S[i + 1, j]) * area / hx
+                    p2 = Wo[i - 1, j] * mid(k[i, j], S[i, j], k[i - 1, j], S[i - 1, j]) * area / hx
+                    p3 = Wo[i, j - 1] * mid(k[i, j], S[i, j], k[i, j + 1], S[i, j + 1]) * area / hy
+                    p4 = Wo[i, j + 1] * mid(k[i, j], S[i, j], k[i, j - 1], S[i, j - 1]) * area / hy
+                    A[idx, idx + 1] -= p1
+                    A[idx, idx - 1] -= p2
+                    A[idx, idx + Nx - 2] -= p3
+                    A[idx, idx - Nx + 2] -= p4
+                    A[idx, idx] += (p1 + p2 + p3 + p4)
 
                     # rhs
                     b[idx] = Wo[i, j] * (m[i, j] - m_0[i, j]) / dT * volume + (1 - S[i, j]) * m[i, j] * volume * (Wo[i, j] - Wo_0[i, j]) / dT
@@ -49,7 +48,6 @@ def calc_pressure(nx, ny, Wo, Wo_0, m, m_0, k, S, p):
 
     fill_matrix_and_rhs(mat)
     sparse_matrix = mat.build()
-    print('matrix build')
 
     solver = ti.linalg.SparseSolver(solver_type="LU")  # ti.linalg.SolverType.LLT, ti.linalg.Ordering.AMD
     solver.analyze_pattern(sparse_matrix)

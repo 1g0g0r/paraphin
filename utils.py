@@ -13,11 +13,13 @@ def mid(k1: ti.types.f32, s1: ti.types.f32, k2: ti.types.f32, s2: ti.types.f32):
     return 2 * x * y / (x + y)
 
 
-def up(i: int, j: int, p: np.ndarray):
-    if p[i] >= p[j]:
-        return K_w(i) / (K_w(i) + K_o(i))
+@ti.func
+def up(k1: ti.types.f32, s1: ti.types.f32, p1: ti.types.f32,
+       k2: ti.types.f32, s2: ti.types.f32, p2: ti.types.f32):
+    if p1 >= p2:
+        return K_w(k1, s1) / (K_w(k1, s1) + K_o(k1, s1))
     else:
-        return K_w(j) / (K_w(j) + K_o(j))
+        return K_w(k2, s2) / (K_w(k2, s2) + K_o(k2, s2))
 
 
 @ti.func
