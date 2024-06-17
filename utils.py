@@ -15,11 +15,15 @@ def mid(k1: ti.types.f32, s1: ti.types.f32, k2: ti.types.f32, s2: ti.types.f32):
 
 @ti.func
 def up(k1: ti.types.f32, s1: ti.types.f32, p1: ti.types.f32,
-       k2: ti.types.f32, s2: ti.types.f32, p2: ti.types.f32):
+       k2: ti.types.f32, s2: ti.types.f32, p2: ti.types.f32) -> ti.f32:
+    ret = 0.0
+
     if p1 >= p2:
-        return K_w(k1, s1) / (K_w(k1, s1) + K_o(k1, s1))
+        ret = K_w(k1, s1) / (K_w(k1, s1) + K_o(k1, s1))
     else:
-        return K_w(k2, s2) / (K_w(k2, s2) + K_o(k2, s2))
+        ret = K_w(k2, s2) / (K_w(k2, s2) + K_o(k2, s2))
+
+    return ret
 
 
 @ti.func

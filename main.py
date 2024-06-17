@@ -15,8 +15,12 @@ def solve():
         sol.update_p()
 
         # Решение уравнения насыщенности
+        sol.update_s()
+
         print("все будет хорошо")
+        break
 
 
 if __name__ == '__main__':
     solve()
+

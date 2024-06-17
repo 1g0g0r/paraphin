@@ -1,5 +1,12 @@
+import taichi as ti
+
+# Инициализация Taichi
+ti.init(arch=ti.cpu)
+# TODO сравнить с gpu
+
+
 # Параметры сетки
-Nx, Ny = 50, 50  # Число узлов сетки по x и y
+Nx, Ny = 3, 3  # Число узлов сетки по x и y
 X_min, X_max = 0., 1.
 Y_min, Y_max = 0., 1.
 hx = (X_max - X_min) / Nx
