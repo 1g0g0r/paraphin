@@ -2,7 +2,7 @@ from paraphin.utils.constants import *
 from paraphin.utils.utils import up_ko, mid
 
 
-def calc_particles(qp, R, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k):
+def calc_temperature(qp, R, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
     """

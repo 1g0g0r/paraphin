@@ -2,7 +2,7 @@ from paraphin.utils.utils import mid
 from paraphin.utils.constants import *
 
 
-def calc_pressure(Wo, Wo_0, m, m_0, k, S, p) -> ti.field(dtype=ti.f32, shape=(Nx, Ny)):
+def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> ti.field(dtype=ti.f32, shape=(Nx, Ny)):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКЭ)
     """
@@ -21,10 +21,14 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, p) -> ti.field(dtype=ti.f32, shape=(Nx
                     # p3 = Wo[i, j - 1] * mid(k[i, j], S[i, j], k[i, j + 1], S[i, j + 1]) * area / hy
                     # p4 = Wo[i, j + 1] * mid(k[i, j], S[i, j], k[i, j - 1], S[i, j - 1]) * area / hy
                     # i, j -> i-1, j-1
-                    p1 = Wo[i, j-1] * mid(k[i-1, j-1], S[i-1, j-1], k[i, j-1], S[i, j-1]) * area / hx
-                    p2 = Wo[i - 2, j-1] * mid(k[i-1, j-1], S[i-1, j-1], k[i - 2, j-1], S[i - 2, j-1]) * area / hx
-                    p3 = Wo[i-1, j - 2] * mid(k[i-1, j-1], S[i-1, j-1], k[i-1, j], S[i-1, j]) * area / hy
-                    p4 = Wo[i-1, j] * mid(k[i-1, j-1], S[i-1, j-1], k[i-1, j - 2], S[i-1, j - 2]) * area / hy
+                    p1 = Wo[i, j-1] * mid(k[i-1, j-1], S[i-1, j-1], mu_o[i-1, j-1], mu_w[i-1, j-1],
+                                          k[i, j-1], S[i, j-1], mu_o[i, j-1], mu_w[i, j-1]) * area / hx
+                    p2 = Wo[i - 2, j-1] * mid(k[i-1, j-1], S[i-1, j-1], mu_o[i-1, j-1], mu_w[i-1, j-1],
+                                              k[i-2, j-1], S[i-2, j-1], mu_o[i-2, j-1], mu_w[i-2, j-1]) * area / hx
+                    p3 = Wo[i-1, j - 2] * mid(k[i-1, j-1], S[i-1, j-1], mu_o[i-1, j-1], mu_w[i-1, j-1],
+                                              k[i-1, j], S[i-1, j], mu_o[i-1, j], mu_w[i-1, j]) * area / hy
+                    p4 = Wo[i-1, j] * mid(k[i-1, j-1], S[i-1, j-1], mu_o[i-1, j-1], mu_w[i-1, j-1],
+                                          k[i-1, j-2], S[i-1, j-2], mu_o[i-1, j-2], mu_w[i-1, j-2]) * area / hy
                     A[idx, idx + 1] -= p1
                     A[idx, idx - 1] -= p2
                     A[idx, idx + Nx + 2] -= p3

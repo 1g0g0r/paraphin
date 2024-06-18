@@ -1,6 +1,7 @@
 import numpy as np
+from time import time
 
-from paraphin.utils.constants import dT
+from paraphin.utils.constants import dT, Time_end
 from paraphin.solver import Solver
 
 
@@ -9,16 +10,18 @@ def solve():
     sol.initialize()
     # Задать начальные условия
 
-    time = np.linspace(0, 1, int(1/dT))
-    for t in time:
-        # Решение уравнения давления
-        sol.update_p()
+    tim = np.linspace(0, 1, int(Time_end/dT))
+    for t in tim:
+        tt = time()
+        sol.update_p()  # Обновление давления
 
-        # Решение уравнения насыщенности
-        sol.update_s()
+        sol.update_s()  # Обновление насыщенности
 
-        print("все будет хорошо")
-        break
+        sol.update_r()  # Обновлнние концентрации взвешенного парафина
+
+        print(time()-tt)
+        if t > 2 * dT:
+            break
 
 
 if __name__ == '__main__':
