@@ -1,7 +1,7 @@
 import numpy as np
 
-from constants import dT
-from solver import Solver
+from paraphin.utils.constants import dT
+from paraphin.solver import Solver
 
 
 def solve():

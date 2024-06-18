@@ -2,7 +2,7 @@ import vtk
 import numpy as np
 
 # Параметры сетки
-nx, ny = 10, 10 # Количество точек по каждой оси
+nx, ny = 10, 10  # Количество точек по каждой оси
 xmin, xmax = 0, 1
 ymin, ymax = 0, 1
 

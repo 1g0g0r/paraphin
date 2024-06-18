@@ -1,15 +1,15 @@
-from constants import *
-from utils import up, mid
+from paraphin.utils.constants import *
+from paraphin.utils.utils import up, mid
 
 
-def calc_saturation(nx, ny, S, p, k, m, m_0) -> ti.field(dtype=ti.f32, shape=(Nx, Ny)):
+def calc_saturation(S, p, k, m, m_0) -> ti.field(dtype=ti.f32, shape=(Nx, Ny)):
     """
     Вычисление водонасыщенности по явной схеме
     """
     @ti.kernel
     def calc_saturation_loop():
-        for i in range(1, nx - 1):
-            for j in range(1, ny - 1):
+        for i in range(1, Nx - 1):
+            for j in range(1, Ny - 1):
                 s1 = up(k[i, j], S[i, j], p[i, j], k[i + 1, j], S[i + 1, j], p[i + 1, j]) * \
                      mid(k[i, j], S[i, j], k[i + 1, j], S[i + 1, j]) * area * (p[i, j] - p[i + 1, j]) / hx
                 s2 = up(k[i, j], S[i, j], p[i, j], k[i - 1, j], S[i - 1, j], p[i - 1, j]) * \

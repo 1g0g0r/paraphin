@@ -1,6 +1,6 @@
-from constants import *
-from calc_pressure import calc_pressure
-from calc_saturation import calc_saturation
+from paraphin.utils.constants import *
+from paraphin.equations.calc_pressure import calc_pressure
+from paraphin.equations.calc_saturation import calc_saturation
 
 
 @ti.data_oriented
@@ -42,8 +42,7 @@ class Solver:
                 self.R[i, j] = init_R
 
     def update_p(self):
-        self.p = calc_pressure(self.nx, self.ny, self.Wo, self.Wo_0,
-                               self.m, self.m_0, self.k, self.S, self.p)
+        self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0, self.k, self.S, self.p)
 
     def update_s(self):
-        self.S = calc_saturation(self.nx, self.ny, self.S, self.p, self.k, self.m, self.m_0)
+        self.S = calc_saturation(self.S, self.p, self.k, self.m, self.m_0)

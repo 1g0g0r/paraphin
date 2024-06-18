@@ -1,8 +1,5 @@
-import numpy as np
-import taichi as ti
-
-from constants import *
-from phase_f import pf_o, pf_w
+from paraphin.utils.constants import *
+from paraphin.utils.phase_f import pf_o, pf_w
 
 
 @ti.func
