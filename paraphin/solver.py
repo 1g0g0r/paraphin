@@ -86,5 +86,5 @@ class Solver:
                                            self.m_0, self.mu_o, self.mu_w)
 
     def update_r(self):
-        self.R = calc_particles(self.qp, self.R, self.m, self.m_0, self.S, self.S_0,
-                                self.Wp, self.Wp_0, self.Wps, self.p, self.k)
+        self.R = calc_particles(self.qp, self.R, self.m, self.m_0, self.S, self.S_0, self.Wp,
+                                self.Wp_0, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
