@@ -1,7 +1,7 @@
 import taichi as ti
 
 # Инициализация Taichi
-ti.init(arch=ti.cpu)  # amdgpu
+ti.init(arch=ti.amdgpu)  # amdgpu
 # TODO сравнить с cuda
 
 

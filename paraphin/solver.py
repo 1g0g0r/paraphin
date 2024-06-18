@@ -2,6 +2,7 @@ from paraphin.utils.constants import *
 from paraphin.equations.calc_pressure import calc_pressure
 from paraphin.equations.calc_saturation import calc_saturation
 from paraphin.equations.calc_particles import calc_particles
+from paraphin.equations.calc_temperature import calc_temperature
 from paraphin.correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w
 
 
@@ -88,3 +89,6 @@ class Solver:
     def update_r(self):
         self.R = calc_particles(self.qp, self.R, self.m, self.m_0, self.S, self.S_0, self.Wp,
                                 self.Wp_0, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
+
+    def update_t(self):
+        self.T = calc_temperature()
