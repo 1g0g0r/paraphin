@@ -10,6 +10,7 @@ def calc_temperature(qp, R, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k):
     def calc_particles_loop():
         for i in range(1, Nx - 1):
             for j in range(1, Ny - 1):
+                # записать цикл по граням
                 r1 = up_ko(k[i, j], S[i, j], p[i, j], k[i + 1, j], S[i + 1, j], p[i + 1, j]) * \
                      mid(k[i, j], S[i, j], k[i + 1, j], S[i + 1, j]) * area * (p[i, j] - p[i + 1, j]) / hx
                 r2 = up_ko(k[i, j], S[i, j], p[i, j], k[i - 1, j], S[i - 1, j], p[i - 1, j]) * \

@@ -29,3 +29,10 @@ def calc_c_o(t: ti.types.f32):
 def calc_c_f(t: ti.types.f32):
     """"Теплоемкость пласта [Дж/K]"""
     return 800 + 0.75 * t
+
+
+# TODO добавить теплопроводности
+# oil 0.13 + 0.0005(t-20)
+# water 0.58 + 0.001(t-20)
+# paraphin 0.25 + 0.0007(t-20)
+# formation 2.5 + 0.0008(t-20)
