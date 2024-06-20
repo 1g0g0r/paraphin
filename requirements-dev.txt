@@ -1,0 +1,18 @@
+# This file contains requirements for development purposes.
+# Testing, typing validation, code formatting
+pytest
+pytest-cov
+pytest-xdist
+snapshottest
+flake8
+flake8-docstrings
+git+https://github.com/matthewrv/mypy.git@ccaf1baec0efb3a2a2ab024a155148916536fcbc#egg=mypy
+pre-commit==2.4.0
+isort
+# Stubs
+types-python-dateutil
+types-Deprecated
+types-requests
+
+# development automation
+bump2version
