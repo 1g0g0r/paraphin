@@ -8,6 +8,7 @@ def calc_temperature(T, m, m_0, S, C_o, C_w, C_f, C_p, R, Wps, p, k):
     """
     @ti.kernel
     def calc_temperature_loop():
+        # TODO for i, j in ti.ndrange(nx, ny):
         for i in range(1, Nx - 1):
             for j in range(1, Ny - 1):
                 multiplier = dT / (m[i, j] * S[i, j] * ro_w * C_w[i, j] + m[i, j] * (1 - S[i, j]) * ro_o * C_o[i, j] +
