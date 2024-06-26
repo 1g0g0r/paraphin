@@ -11,25 +11,16 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (ti.field(dtype=ti.f32,
     def calc_saturation_loop():
         for i in range(1, Nx - 1):
             for j in range(1, Ny - 1):
+                temp_val = 0.0
                 S_0[i, j] = S[i, j]
+                # для давления i,j = i+1, j+1
+                for i1, j1, hij in [(i+1, j, hx), (i-1, j, hx), (i, j+1, hy), (i, j-1, hy)]:
+                    temp_val += up_kw(k[i, j], S[i, j], p[i+1, j+1], mu_o[i, j], mu_w[i, j],
+                                      k[i1, j1], S[i1, j1], p[i1+1, j1+1], mu_o[i1, j1], mu_w[i1, j1]) * \
+                                mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
+                                    k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1])*area*(p[i+1, j+1] - p[i1+1, j1+1])/hij
 
-                s1 = up_kw(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
-                           k[i+1, j], S[i+1, j], p[i+1, j], mu_o[i+1, j], mu_w[i+1, j]) * \
-                     mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
-                         k[i+1, j], S[i+1, j], mu_o[i+1, j], mu_w[i+1, j]) * area * (p[i, j] - p[i + 1, j]) / hx
-                s2 = up_kw(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
-                           k[i-1, j], S[i-1, j], p[i-1, j], mu_o[i-1, j], mu_w[i-1, j]) * \
-                     mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
-                         k[i - 1, j], S[i - 1, j], mu_o[i-1, j], mu_w[i-1, j],) * area * (p[i, j] - p[i - 1, j]) / hx
-                s3 = up_kw(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
-                           k[i, j+1], S[i, j+1], p[i, j+1], mu_o[i, j+1], mu_w[i, j+1]) * \
-                     mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
-                         k[i, j+1], S[i, j+1], mu_o[i, j+1], mu_w[i, j+1]) * area * (p[i, j] - p[i, j + 1]) / hy
-                s4 = up_kw(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
-                           k[i, j-1], S[i, j-1], p[i, j-1], mu_o[i, j-1], mu_w[i, j-1]) * \
-                     mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
-                         k[i, j-1], S[i, j-1], mu_o[i, j-1], mu_w[i, j-1]) * area * (p[i, j] - p[i, j - 1]) / hy
-                S[i, j] += -S[i, j] * (m[i, j] - m_0[i, j]) / m[i, j] - (s1 + s2 + s3 + s4) / m[i, j] / volume
+                S[i, j] += -S[i, j] * (m[i, j] - m_0[i, j]) / m[i, j] - temp_val / m[i, j] / volume
 
     calc_saturation_loop()
     S[0, 0] += dT * qw / m[0, 0]

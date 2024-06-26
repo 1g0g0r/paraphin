@@ -7,7 +7,7 @@ ti.init(arch=ti.cpu)
 
 # Размеры сетки
 n = 512
-t_max = 5000
+t_max = 7000
 corr_t_max = int((t_max + 1) / 100)
 
 # Создаем поля для хранения значений
@@ -19,13 +19,14 @@ times = np.empty(corr_t_max + 1, dtype=object)
 @ti.kernel
 def set_boundary():
     """Задаем граничные условия"""
-    for i, j in b:
-        if i == 0:
-            u[0, j] = u[1, j] + 10.0
-        elif i == n - 1:
-            u[n - 1, j] = 10
-        elif j == 0 or j == n - 1:
-            u[i, j] = 0.0
+    u[int(n/2), int(n/2)] = 10.0
+    # for i, j in b:
+    #     if i == 0:
+    #         u[0, j] = u[1, j] + 10.0
+    #     elif i == n - 1:
+    #         u[n - 1, j] = 10
+    #     elif j == 0 or j == n - 1:
+    #         u[i, j] = 0.0
 
 
 @ti.kernel
@@ -38,8 +39,9 @@ def poisson():
 
 def start_calc():
     t1 = time()
-    set_boundary()
+
     for i in range(t_max):
+        set_boundary()
         poisson()
         if i % 100 == 0 or i == t_max - 1:
             times[int(i/100)] = u.to_numpy()
