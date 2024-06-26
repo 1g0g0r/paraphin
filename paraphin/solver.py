@@ -1,7 +1,7 @@
 from paraphin.utils.constants import *
 from paraphin.equations.calc_pressure import calc_pressure
 from paraphin.equations.calc_saturation import calc_saturation
-from paraphin.equations.calc_particles import calc_particles
+from paraphin.equations.calc_wps import calc_wps
 from paraphin.equations.calc_temperature import calc_temperature
 from paraphin.correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w
 
@@ -33,7 +33,6 @@ class Solver:
         self.k = ti.field(dtype=ti.f32, shape=(nx, ny))  # проницаемость [m^2]
         self.m = ti.field(dtype=ti.f32, shape=(nx, ny))  # пористость
         self.m_0 = ti.field(dtype=ti.f32, shape=(nx, ny))
-        self.R = ti.field(dtype=ti.f32, shape=(nx, ny))  # концентрация взвешенного парафина
         self.T = ti.field(dtype=ti.f32, shape=(nx, ny))  # температура
 
         # динамика образования парафина
@@ -58,7 +57,6 @@ class Solver:
                 self.k[i, j] = init_k
                 self.m[i, j] = init_m
                 self.m_0[i, j] = init_m
-                self.R[i, j] = init_R
                 self.T[i, j] = init_T
 
                 # свойства флюидов
@@ -86,9 +84,9 @@ class Solver:
         self.S, self.S_0 = calc_saturation(self.S, self.S_0, self.p, self.k, self.m,
                                            self.m_0, self.mu_o, self.mu_w)
 
-    def update_r(self):
-        self.R = calc_particles(self.qp, self.R, self.m, self.m_0, self.S, self.S_0, self.Wp,
-                                self.Wp_0, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
+    def update_wps(self):
+        self.Wps = calc_wps(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
+                            self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
     def update_t(self):
         self.T = calc_temperature()

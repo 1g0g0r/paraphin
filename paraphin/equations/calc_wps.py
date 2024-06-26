@@ -2,12 +2,12 @@ from paraphin.utils.constants import *
 from paraphin.utils.utils import up_ko, mid
 
 
-def calc_particles(qp, R, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w):
+def calc_wps(qp, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
     """
     @ti.kernel
-    def calc_particles_loop():
+    def calc_wps_loop():
         for i in range(1, Nx - 1):
             for j in range(1, Ny - 1):
                 temp_val = 0.0
@@ -22,6 +22,6 @@ def calc_particles(qp, R, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w):
                             (1 - S[i, j]) * (Wp[i, j] - Wp_0[i, j]) / dT - ro_p * qp * volume - ro_o *
                             (Wp[i, j] + Wps[i, j]) * temp_val)
 
-    calc_particles_loop()
+    calc_wps_loop()
 
     return R

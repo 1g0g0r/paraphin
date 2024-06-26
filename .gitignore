@@ -9,4 +9,4 @@
 
 TempFiles/
 ~$*
-.pkl
+*.pkl
