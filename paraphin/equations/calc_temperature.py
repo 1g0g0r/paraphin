@@ -29,6 +29,8 @@ def calc_temperature(T, m, m_0, S, C_o, C_w, C_f, C_p, R, Wps, p, k):
 
                 t3 *= T[i, j] * (ro_o * C_o + ro_o * Wps * C_p) * area
 
+                T[i, j] += multiplier * (t1 + t2 + t3)
+
     calc_temperature_loop()
 
     return T

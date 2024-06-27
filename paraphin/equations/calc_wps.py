@@ -11,6 +11,7 @@ def calc_wps(qp, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w):
         for i in range(1, Nx - 1):
             for j in range(1, Ny - 1):
                 temp_val = 0.0
+                # TODO переписать дискретизацию уравнения
                 for i1, j1, hij in [(i + 1, j, hx), (i - 1, j, hx), (i, j + 1, hy), (i, j - 1, hy)]:
                     temp_val += up_ko(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
                                       k[i1, j1], S[i1, j1], p[i1+1, j1+1], mu_o[i1, j1], mu_w[i1, j1]) * \
