@@ -19,6 +19,8 @@ def solve():
 
         sol.update_r()  # Обновлнние концентрации взвешенного парафина
 
+        sol.update_t()  # Обновление температуры
+
         print(time()-tt)
         if t > 2 * dT:
             break

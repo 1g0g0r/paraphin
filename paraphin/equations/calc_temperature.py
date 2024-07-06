@@ -2,9 +2,9 @@ from paraphin.utils.constants import *
 from paraphin.utils.utils import up_kw, up_ko, mid
 
 
-def calc_temperature(T, m, m_0, S, C_o, C_w, C_f, C_p, Wp, Wps, p, k):
+def calc_temperature(T, m, S, C_o, C_w, C_f, C_p, Wp, Wps, p, k):
     """
-    Вычисление концентрации взвешенных частиц парафина по явной схеме
+    Вычисление температуры по явной схеме
     """
     @ti.kernel
     def calc_temperature_loop():
