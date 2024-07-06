@@ -21,7 +21,7 @@ def solve():
 
         sol.update_t()  # Обновление температуры
 
-        print(time()-tt)
+        print(time() - tt)
         if t > 2 * dT:
             break
 

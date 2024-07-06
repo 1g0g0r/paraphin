@@ -1,4 +1,5 @@
 import taichi as ti
+import numpy as np
 
 # Инициализация Taichi
 ti.init(arch=ti.amdgpu)  # amdgpu
