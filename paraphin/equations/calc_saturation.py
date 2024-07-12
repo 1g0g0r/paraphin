@@ -7,7 +7,7 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (ti.field(dtype=ti.f32,
     """
     Вычисление водонасыщенности по явной схеме
     """
-
+    loop_arr = ti.field(ti.f32, shape=(4, 3))
     @ti.kernel
     def calc_saturation_loop():
         for i in range(1, Nx - 1):
@@ -16,7 +16,9 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (ti.field(dtype=ti.f32,
                 S_0[i, j] = S[i, j]
 
                 # для давления i,j = i+1, j+1
-                for i1, j1, hij in [(i+1, j, hx), (i-1, j, hx), (i, j+1, hy), (i, j-1, hy)]:
+                loop_array = [[i+1, j, hx], [i-1, j, hx], [i, j+1, hy], [i, j-1, hy]]
+                for idx in range(4):
+                    i1, j1, hij = loop_array  # TODO добавить везде ti.static(range(1, Ny - 1))
                     temp_val += up_kw(k[i, j], S[i, j], p[i+1, j+1], mu_o[i, j], mu_w[i, j],
                                       k[i1, j1], S[i1, j1], p[i1+1, j1+1], mu_o[i1, j1], mu_w[i1, j1]) * \
                                 mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
