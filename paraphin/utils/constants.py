@@ -3,7 +3,6 @@ import numpy as np
 
 # Инициализация Taichi
 ti.init(arch=ti.amdgpu)  # amdgpu
-# TODO сравнить с cuda
 
 
 # Параметры сетки
