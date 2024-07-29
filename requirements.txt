@@ -2,7 +2,6 @@ matplotlib
 numpy
 numba
 scipy
-meshpy
-pyvista
+tqdm
 pyvtk
 taichi

@@ -1,29 +1,26 @@
-import numpy as np
-from time import time
+"""Модуль запуска всего расчета."""
+from numpy import linspace
+from tqdm import tqdm
 
-from paraphin.utils.constants import dT, Time_end
 from paraphin.solver import Solver
+from paraphin.utils.constants import Time_end, dT
 
 
 def solve():
+    """Запуск расчета."""
     sol = Solver()
-    sol.initialize()
-    # Задать начальные условия
+    sol.initialize()    # Задать начальные условия
 
-    tim = np.linspace(0, 1, int(Time_end/dT))
-    for t in tim:
-        tt = time()
+    def run_iteration():
         sol.update_p()  # Обновление давления
-
         sol.update_s()  # Обновление насыщенности
-
         sol.update_wps()  # Обновлнние концентрации взвешенного парафина
-
         sol.update_t()  # Обновление температуры
 
-        print(time() - tt)
-        if t > 2 * dT:
-            break
+    times = linspace(0, 1, int(Time_end/dT))
+    list(tqdm(map(run_iteration, times), total=len(times), ncols=70,
+              desc="Парафин считается", colour="#009FBD"))
+    breakpoint()
 
 
 if __name__ == '__main__':
