@@ -5,7 +5,7 @@ from paraphin.utils.utils import up_kw, mid
 def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (ti.field(dtype=ti.f32, shape=(Nx, Ny)),
                                                           ti.field(dtype=ti.f32, shape=(Nx, Ny))):
     """
-    Вычисление водонасыщенности по явной схеме
+    Вычисление водонасыщенности по явной схеме.
     """
     @ti.kernel
     def calc_saturation_loop():
