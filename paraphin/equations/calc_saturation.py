@@ -12,7 +12,7 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (ti.field(dtype=ti.f32,
         for i, j in ti.ndrange((1, Nx - 1), (1, Ny - 1)):
             temp_val = 0.0
             S_0[i, j] = S[i, j]
-            # для давления i,j = i+1, j+1
+            # для давления i, j = i+1, j+1
             arr = [[i+1, j, hx], [i-1, j, hx], [i, j+1, hy], [i, j-1, hy]]
             for idx in ti.static(ti.ndrange(4)):
                 i1, j1, hij = arr[idx]
