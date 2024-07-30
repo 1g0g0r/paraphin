@@ -5,7 +5,7 @@ from paraphin.equations.calc_pressure import calc_pressure
 from paraphin.equations.calc_saturation import calc_saturation
 from paraphin.equations.calc_wps import calc_wps
 from paraphin.equations.calc_temperature import calc_temperature
-from paraphin.correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w
+from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w
 
 
 @ti.data_oriented
