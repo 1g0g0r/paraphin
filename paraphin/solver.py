@@ -5,7 +5,7 @@ from paraphin.equations.calc_pressure import calc_pressure
 from paraphin.equations.calc_saturation import calc_saturation
 from paraphin.equations.calc_wps import calc_wps
 from paraphin.equations.calc_temperature import calc_temperature
-from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w
+from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
 
 
 @ti.data_oriented
@@ -20,8 +20,9 @@ class Solver:
         self.mu_o = ti.field(dtype=ti.f32, shape=(nx, ny))  # вязкость нефти
         self.mu_w = ti.field(dtype=ti.f32, shape=(nx, ny))  # вязкость воды
         self.C_w = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость воды
-        self.C_o = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость воды
-        self.C_f = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость воды
+        self.C_o = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость нефти
+        self.C_f = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость пласта
+        self.C_p = ti.field(dtype=ti.f32, shape=(nx, ny))  # теплоемкость парафина
 
         # поля данных
         self.p = ti.field(dtype=ti.f32, shape=(nx + 2, ny + 2))  # давление
@@ -67,6 +68,7 @@ class Solver:
                 self.C_w[i, j] = calc_c_w(init_T)
                 self.C_o[i, j] = calc_c_o(init_T)
                 self.C_f[i, j] = calc_c_f(init_T)
+                self.C_p[i, j] = calc_c_p(init_T)
 
     @ti.kernel
     def update_mu_and_c(self):
@@ -77,6 +79,7 @@ class Solver:
                 self.C_w[i, j] = calc_c_w(self.T[i, j])
                 self.C_o[i, j] = calc_c_o(self.T[i, j])
                 self.C_f[i, j] = calc_c_f(self.T[i, j])
+                self.C_p[i, j] = calc_c_p(self.T[i, j])
 
     def update_p(self):
         self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0, self.k,
@@ -93,3 +96,10 @@ class Solver:
     def update_t(self):
         self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f,
                                   self.C_p, self.Wp, self.Wps, self.p, self.k)
+
+    def upd_time_step(self):
+        self.update_p()  # Обновление давления
+        self.update_s()  # Обновление насыщенности
+        self.update_wps()  # Обновлнние концентрации взвешенного парафина
+        self.update_t()    # Обновление температуры
+

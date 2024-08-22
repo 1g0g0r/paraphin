@@ -11,18 +11,14 @@ def solve():
     sol = Solver()
     sol.initialize()    # Задать начальные условия
 
-    def run_iteration():
-        sol.update_p()  # Обновление давления
-        sol.update_s()  # Обновление насыщенности
-        sol.update_wps()  # Обновлнние концентрации взвешенного парафина
-        sol.update_t()  # Обновление температуры
-
     times = linspace(0, 1, int(Time_end/dT))
-    list(tqdm(map(run_iteration, times), total=len(times), ncols=70,
+    list(tqdm(map(sol.upd_time_step(), times), total=len(times), ncols=70,
               desc="Парафин считается", colour="#009FBD"))
+
     breakpoint()
 
 
 if __name__ == '__main__':
     solve()
     #     https://github.com/hejob/taichi-fvm2d-fluid-ns
+
