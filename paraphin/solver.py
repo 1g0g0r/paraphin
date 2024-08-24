@@ -94,8 +94,8 @@ class Solver:
                             self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
     def update_t(self):
-        self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f,
-                                  self.C_p, self.Wp, self.Wps, self.p, self.k)
+        self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
+                                  self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
     def upd_time_step(self):
         self.update_p()  # Обновление давления

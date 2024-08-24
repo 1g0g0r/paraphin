@@ -1,4 +1,6 @@
 """Модуль запуска всего расчета."""
+import time
+
 from numpy import linspace
 from tqdm import tqdm
 
@@ -12,13 +14,13 @@ def solve():
     sol.initialize()    # Задать начальные условия
 
     times = linspace(0, 1, int(Time_end/dT))
-    list(tqdm(map(sol.upd_time_step(), times), total=len(times), ncols=70,
-              desc="Парафин считается", colour="#009FBD"))
-
+    for t in tqdm(times, total=len(times), ncols=70, desc="Парафин считается", colour="#009FBD"):
+        sol.upd_time_step()
     breakpoint()
 
 
 if __name__ == '__main__':
     solve()
-    #     https://github.com/hejob/taichi-fvm2d-fluid-ns
+
+# Идея использовать либу taichi пришла благодаря репозиторию: https://github.com/hejob/taichi-fvm2d-fluid-ns
 
