@@ -1,6 +1,6 @@
 """Модуль запуска всего расчета."""
-import time
 
+from sys import stdout
 from numpy import linspace
 from tqdm import tqdm
 
@@ -14,8 +14,9 @@ def solve():
     sol.initialize()    # Задать начальные условия
 
     times = linspace(0, 1, int(Time_end/dT))
-    for t in tqdm(times, total=len(times), ncols=70, desc="Парафин считается", colour="#009FBD"):
+    for t in tqdm(iterable=times, ncols=100, desc='Парафин считается', file=stdout):
         sol.upd_time_step()
+
     breakpoint()
 
 
