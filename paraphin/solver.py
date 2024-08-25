@@ -43,9 +43,9 @@ class Solver:
         self.qp: float = 0.0  # скорость отложения парафиновых отложений в общем объеме пористой породы
 
         # Массив результатов
-        self.pressure = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
-        self.saturation = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
-        self.temperature = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
+        self.pressure = np.empty(np.ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
+        self.saturation = np.empty(np.ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
+        self.temperature = np.empty(np.ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
 
     @ti.kernel
     def initialize(self):
@@ -107,11 +107,11 @@ class Solver:
         self.update_t()    # Обновление температуры
 
     def save_results(self, idx):
-        self.pressure[idx] = self.p
-        self.saturation[idx] = self.S
-        self.temperature[idx] = self.T
+        self.pressure[idx] = self.p.to_numpy()[1:-1, 1:-1]
+        self.saturation[idx] = self.S.to_numpy()
+        self.temperature[idx] = self.T.to_numpy()
 
-        if np.isclose(idx, Time_end / dT - 1):
+        if np.isclose(idx, len(self.pressure) - 1):
             with open('data.pkl', 'wb') as f:
                 pickle.dump([self.pressure, self.saturation, self.temperature], f)
 
@@ -120,7 +120,7 @@ class Solver:
             pres, sat, temp = pickle.load(f)
 
         # Визуализируем решение
-        gui = ti.GUI("Поля данных", res=(self.Nx, self.Ny))
+        gui = ti.GUI("Поля данных", res=(self.nx, self.ny))
         time_slider = gui.slider("Время", 0, Time_end)
 
         # Максимальные/минимальные значения полей данных
@@ -159,7 +159,7 @@ class Solver:
 
             # Нормализуем данные для преобразования в цвет
             normalized_data = (data - min_val) / (max_val - min_val)  # Нормализация
-            color_data = np.zeros((self.Nx, self.Ny, 3))  # Создаем массив для цвета
+            color_data = np.zeros((self.nx, self.ny, 3))  # Создаем массив для цвета
 
             # Преобразуем нормализованные данные в цвет (RGB) # Пример: градиент от красного к синему
             color_data[:, :, 0] = normalized_data

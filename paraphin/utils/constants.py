@@ -2,7 +2,7 @@ import taichi as ti
 import numpy as np
 
 # Инициализация Taichi
-ti.init(arch=ti.amdgpu)  # amdgpu
+ti.init(arch=ti.cpu)  # ti.amdgpu
 
 
 # Параметры сетки
