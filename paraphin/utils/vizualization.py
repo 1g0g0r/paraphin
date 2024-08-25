@@ -1,6 +1,7 @@
 from pickle import load
-from taichi import GUI, tools
+
 from numpy import min, max, zeros, ones_like
+from taichi import GUI, tools
 
 from paraphin.utils.constants import output_file_name, Time_end, sol_time_step
 

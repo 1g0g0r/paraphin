@@ -1,7 +1,7 @@
 from taichi import f32, linalg, field, types, ndrange, kernel
 
-from paraphin.utils.utils import mid
 from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
+from paraphin.utils.utils import mid
 
 
 def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):

@@ -1,11 +1,12 @@
 from pickle import dump
+
 from numpy import empty, ceil, isclose
 from taichi import f32, field, ndrange, data_oriented, kernel
 
 from paraphin.equations.calc_pressure import calc_pressure
 from paraphin.equations.calc_saturation import calc_saturation
-from paraphin.equations.calc_wps import calc_wps
 from paraphin.equations.calc_temperature import calc_temperature
+from paraphin.equations.calc_wps import calc_wps
 from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
 from paraphin.utils.constants import (Nx, Ny, Time_end, sol_time_step, output_file_name, init_T,
                                       init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p)
