@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 
 from paraphin.utils.constants import *
@@ -36,50 +37,52 @@ class Solver:
         self.k = ti.field(dtype=ti.f32, shape=(nx, ny))  # проницаемость [m^2]
         self.m = ti.field(dtype=ti.f32, shape=(nx, ny))  # пористость
         self.m_0 = ti.field(dtype=ti.f32, shape=(nx, ny))
-        self.T = ti.field(dtype=ti.f32, shape=(nx, ny))  # температура
+        self.T = ti.field(dtype=ti.f32, shape=(nx, ny))  # температура [C]
 
         # динамика образования парафина
         self.qp: float = 0.0  # скорость отложения парафиновых отложений в общем объеме пористой породы
 
+        # Массив результатов
+        self.pressure = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
+        self.saturation = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
+        self.temperature = np.empty(int(Time_end / sol_time_step + 1), dtype=object)
+
     @ti.kernel
     def initialize(self):
-        for i in range(self.nx + 2):
-            for j in range(self.ny + 2):
-                self.p[i, j] = init_p
+        for i, j in ti.ndrange(self.nx + 2, self.ny + 2):
+            self.p[i, j] = init_p
 
-        for i in range(self.nx):
-            for j in range(self.ny):
-                # параметры пласта
-                self.S[i, j] = init_S
-                self.S_0[i, j] = init_S
-                self.Wo[i, j] = init_Wo
-                self.Wo_0[i, j] = init_Wo
-                self.Wp[i, j] = init_Wp
-                self.Wp_0[i, j] = init_Wp
-                self.Wps[i, j] = init_Wps
-                self.k[i, j] = init_k
-                self.m[i, j] = init_m
-                self.m_0[i, j] = init_m
-                self.T[i, j] = init_T
+        for i, j in ti.ndrange(self.nx, self.ny):
+            # параметры пласта
+            self.S[i, j] = init_S
+            self.S_0[i, j] = init_S
+            self.Wo[i, j] = init_Wo
+            self.Wo_0[i, j] = init_Wo
+            self.Wp[i, j] = init_Wp
+            self.Wp_0[i, j] = init_Wp
+            self.Wps[i, j] = init_Wps
+            self.k[i, j] = init_k
+            self.m[i, j] = init_m
+            self.m_0[i, j] = init_m
+            self.T[i, j] = init_T
 
-                # свойства флюидов
-                self.mu_o[i, j] = calc_mu_o(init_T)
-                self.mu_w[i, j] = calc_mu_w(init_T)
-                self.C_w[i, j] = calc_c_w(init_T)
-                self.C_o[i, j] = calc_c_o(init_T)
-                self.C_f[i, j] = calc_c_f(init_T)
-                self.C_p[i, j] = calc_c_p(init_T)
+            # свойства флюидов
+            self.mu_o[i, j] = calc_mu_o(init_T)
+            self.mu_w[i, j] = calc_mu_w(init_T)
+            self.C_w[i, j] = calc_c_w(init_T)
+            self.C_o[i, j] = calc_c_o(init_T)
+            self.C_f[i, j] = calc_c_f(init_T)
+            self.C_p[i, j] = calc_c_p(init_T)
 
     @ti.kernel
     def update_mu_and_c(self):
-        for i in range(self.nx):
-            for j in range(self.ny):
-                self.mu_o[i, j] = calc_mu_o(self.T[i, j])
-                self.mu_w[i, j] = calc_mu_w(self.T[i, j])
-                self.C_w[i, j] = calc_c_w(self.T[i, j])
-                self.C_o[i, j] = calc_c_o(self.T[i, j])
-                self.C_f[i, j] = calc_c_f(self.T[i, j])
-                self.C_p[i, j] = calc_c_p(self.T[i, j])
+        for i, j in ti.ndrange(self.nx, self.ny):
+            self.mu_o[i, j] = calc_mu_o(self.T[i, j])
+            self.mu_w[i, j] = calc_mu_w(self.T[i, j])
+            self.C_w[i, j] = calc_c_w(self.T[i, j])
+            self.C_o[i, j] = calc_c_o(self.T[i, j])
+            self.C_f[i, j] = calc_c_f(self.T[i, j])
+            self.C_p[i, j] = calc_c_p(self.T[i, j])
 
     def update_p(self):
         self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0, self.k,
@@ -103,3 +106,68 @@ class Solver:
         self.update_wps()  # Обновлнние концентрации взвешенного парафина
         self.update_t()    # Обновление температуры
 
+    def save_results(self, idx):
+        self.pressure[idx] = self.p
+        self.saturation[idx] = self.S
+        self.temperature[idx] = self.T
+
+        if np.isclose(idx, Time_end / dT - 1):
+            with open('data.pkl', 'wb') as f:
+                pickle.dump([self.pressure, self.saturation, self.temperature], f)
+
+    def start_visualize(self):
+        with open('data.pkl', 'rb') as f:
+            pres, sat, temp = pickle.load(f)
+
+        # Визуализируем решение
+        gui = ti.GUI("Поля данных", res=(self.Nx, self.Ny))
+        time_slider = gui.slider("Время", 0, Time_end)
+
+        # Максимальные/минимальные значения полей данных
+        min_pres = min([np.min(q) for q in pres])
+        max_pres = max([np.max(q) for q in pres])
+        min_sat = min([np.min(q) for q in sat])
+        max_sat = max([np.max(q) for q in sat])
+        min_temp = min([np.min(q) for q in temp])
+        max_temp = max([np.max(q) for q in temp])
+
+        # Начальная инициализация GUI
+        data = pres[0]
+        min_val = min_pres
+        max_val = max_pres
+
+        while gui.running:
+            # Получаем индекс времени
+            time_index = int(time_slider.value / sol_time_step)
+
+            # Выбор поля данных
+            for e in gui.get_events(ti.GUI.PRESS):
+                if e.key == ti.GUI.SPACE:
+                    gui.running = False
+                elif e.key == '1':
+                    data = pres[time_index]
+                    min_val = min_pres
+                    max_val = max_pres
+                elif e.key == '2':
+                    data = sat[time_index]
+                    min_val = min_sat
+                    max_val = max_sat
+                elif e.key == '3':
+                    data = temp[time_index]
+                    min_val = min_temp
+                    max_val = max_temp
+
+            # Нормализуем данные для преобразования в цвет
+            normalized_data = (data - min_val) / (max_val - min_val)  # Нормализация
+            color_data = np.zeros((self.Nx, self.Ny, 3))  # Создаем массив для цвета
+
+            # Преобразуем нормализованные данные в цвет (RGB) # Пример: градиент от красного к синему
+            color_data[:, :, 0] = normalized_data
+            color_data[:, :, 1] = np.ones_like(normalized_data) * 0.5
+            color_data[:, :, 2] = 1.0 - normalized_data
+
+            # Устанавливаем цветное изображение
+            gui.set_image(color_data)
+
+            # Отображаем GUI
+            gui.show()
