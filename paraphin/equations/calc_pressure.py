@@ -1,18 +1,20 @@
+from taichi import f32, linalg, field, types, ndrange, kernel
+
 from paraphin.utils.utils import mid
-from paraphin.utils.constants import *
+from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
 
 
-def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> ti.field(dtype=ti.f32, shape=(Nx, Ny)):
+def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКО)
     """
     N = (Nx + 2) * (Ny + 2)
-    mat = ti.linalg.SparseMatrixBuilder(N, N, max_num_triplets=5 * N)
-    b = ti.field(ti.f32, shape=N)
+    mat = linalg.SparseMatrixBuilder(N, N, max_num_triplets=5 * N)
+    b = field(f32, shape=N)
 
-    @ti.kernel
-    def fill_matrix_and_rhs(A: ti.types.sparse_matrix_builder()):
-        for i, j in ti.ndrange(Nx + 2, Ny + 2):
+    @kernel
+    def fill_matrix_and_rhs(A: types.sparse_matrix_builder()):
+        for i, j in ndrange(Nx + 2, Ny + 2):
             idx = i * (Ny + 2) + j
             if 1 <= i <= Nx and 1 <= j <= Ny:
                 # i, j -> i-1, j-1
@@ -31,8 +33,8 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> ti.field(dtype=ti.f3
                 A[idx, idx] += (p1 + p2 + p3 + p4)
 
                 # rhs
-                b[idx] = Wo[i, j] * (m[i, j] - m_0[i, j]) / dT * volume + (1 - S[i, j]) * m[i, j] * volume * (
-                            Wo[i, j] - Wo_0[i, j]) / dT
+                b[idx] = Wo[i, j] * (m[i, j] - m_0[i, j]) / dt * volume + (1 - S[i, j]) * m[i, j] * volume * (
+                            Wo[i, j] - Wo_0[i, j]) / dt
             else:
                 A[idx, idx] += 1.0  # For boundary points, set diagonal to 1 (Neumann BC)
 
@@ -52,7 +54,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> ti.field(dtype=ti.f3
     fill_matrix_and_rhs(mat)
     sparse_matrix = mat.build()
 
-    solver = ti.linalg.SparseSolver(solver_type="LLT", ordering="AMD")
+    solver = linalg.SparseSolver(solver_type="LLT", ordering="AMD")
     solver.analyze_pattern(sparse_matrix)
     solver.factorize(sparse_matrix)
 

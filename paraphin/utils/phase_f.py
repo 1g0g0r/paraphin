@@ -1,7 +1,9 @@
-from paraphin.utils.constants import *
+from taichi import func
+
+from paraphin.utils.constants import S_min, S_max
 
 
-@ti.func
+@func
 def pf_o(s, mu_o):
     """
     Функция отностельной фазовой проницаемости нефти
@@ -10,7 +12,7 @@ def pf_o(s, mu_o):
     return ((s - S_min)/(S_max-S_min)) ** 2 / mu_o
 
 
-@ti.func
+@func
 def pf_w(s, mu_w):
     """
     Функция отностельной фазовой проницаемости воды

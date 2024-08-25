@@ -1,11 +1,14 @@
 """Модуль запуска всего расчета."""
 
+from tqdm import tqdm
 from sys import stdout
 from numpy import linspace, isclose
-from tqdm import tqdm
+from taichi import init, cpu
+init(arch=cpu)  # ti.amdgpu
 
 from paraphin.solver import Solver
-from paraphin.utils.constants import Time_end, dT, sol_time_step
+from paraphin.utils.constants import Time_end, dt, sol_time_step
+from paraphin.utils.vizualization import visualize_solution
 
 
 def solve():
@@ -14,7 +17,7 @@ def solve():
     sol = Solver()
     sol.initialize()  # Задание начальных условий
 
-    times = linspace(0, Time_end, int(Time_end / dT + 1))
+    times = linspace(0, Time_end, int(Time_end / dt + 1))
     for t in tqdm(iterable=times, ncols=100, desc='Парафин считается', file=stdout):
         sol.upd_time_step()
 
@@ -22,7 +25,7 @@ def solve():
             sol.save_results(iter)
             iter += 1
 
-    sol.start_visualize()
+    visualize_solution()
 
 
 if __name__ == '__main__':
