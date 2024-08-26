@@ -1,4 +1,3 @@
-# This file contains requirements for development purposes.
 # Testing, typing validation, code formatting
 pytest
 pytest-cov
@@ -13,6 +12,3 @@ isort
 types-python-dateutil
 types-Deprecated
 types-requests
-
-# development automation
-bump2version

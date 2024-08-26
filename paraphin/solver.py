@@ -103,6 +103,7 @@ class Solver:
                                   self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
     def upd_time_step(self) -> None:
+        """Метод IMPES: явный по насыщенности и неявный по давления"""
         self._update_p()  # Обновление давления
         self._update_s()  # Обновление насыщенности
         self._update_wps()  # Обновлнние концентрации взвешенного парафина
