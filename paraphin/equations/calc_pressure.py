@@ -14,8 +14,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> field(dtype=f32, sha
 
     @kernel
     def fill_matrix_and_rhs(A: types.sparse_matrix_builder()):
-        p1, p2, p3, p4 = 0, 0, 0, 0
-        bc = 17.0  # TODO проверить можно ли поставить ноль
+        p = 0.0
 
         for i, j in ndrange((1, Nx-1), (1, Ny-1)):
             idx = j * Nx + i
@@ -33,23 +32,63 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, p, mu_o, mu_w) -> field(dtype=f32, sha
             b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) / dt * volume + (1 - S[i, j]) *
                       m[i, j] * volume * (Wo[i, j] - Wo_0[i, j]) / dt)
 
+        # boundary points (верх/низ)
         for i in ndrange(Nx):
-            idx_bottom = i
-            idx_top = (Nx - 1) * (Ny - 2) + i
+            idx_bot = i
+            idx_top = Nx * (Ny - 1) + i
 
-            b[idx_bottom] = p[i, 1]
-            b[idx_top] = p[i, Ny]
-            A[idx_bottom, idx_bottom] += 1.0  # For boundary points, set diagonal to 1 (Neumann BC)
-            A[idx_top, idx_top] += 1.0  # For boundary points, set diagonal to 1 (Neumann BC)
+            # низ
+            arr = [[i + 1, 0, hx], [i - 1, 0, hx], [i, 1, hy]]
+            for qq in static(ndrange(3)):  # TODO учесть углы
+                i1, j1, hij = arr[qq]
+                p = Wo[i1, j1] * mid(k[i, 0], S[i, 0], mu_o[i, 0], mu_w[i, 0],
+                                     k[i1, 0], S[i1, 0], mu_o[i1, 0], mu_w[i1, 0]) * area / hij
+                A[idx_bot, idx_bot - 1] -= p
+                A[idx_bot, idx_bot] += p
+            b[idx_bot] = (Wo[i, 0] * (m[i, 0] - m_0[i, 0]) / dt * volume + (1 - S[i, 0]) *
+                          m[i, 0] * volume * (Wo[i, 0] - Wo_0[i, 0]) / dt)
 
+            # вверх
+            arr = [[i - 1, Ny - 1, hx], [i + 1, Ny - 1, hx], [i, Ny - 2, hy]]
+            for qq in static(ndrange(3)):  # TODO учесть углы
+                i1, j1, hij = arr[qq]
+                p = Wo[i1, j1] * mid(k[i, Ny - 1], S[i, Ny - 1], mu_o[i, Ny - 1], mu_w[i, Ny - 1],
+                                     k[i1, Ny - 1], S[i1, Ny - 1], mu_o[i1, Ny - 1], mu_w[i1, Ny - 1]) * area / hij
+                A[idx_top, idx_top + 1] -= p  # TODO уточнить индекс элемента
+                A[idx_top, idx_top] += p
+            b[idx_top] = (Wo[i, Ny - 1] * (m[i, Ny - 1] - m_0[i, Ny - 1]) / dt * volume + (1 - S[i, Ny - 1]) *
+                          m[i, Ny - 1] * volume * (Wo[i, Ny - 1] - Wo_0[i, Ny - 1]) / dt)
+
+        # boundary points (лево/право)
         for j in ndrange(Ny):
             idx_left = j * Nx
             idx_right = (j + 1) * Nx - 1
 
-            b[idx_left] = p[1, j]
-            b[idx_right] = p[Nx, j]
-            A[idx_left, idx_right] += 1.0  # For boundary points, set diagonal to 1 (Neumann BC)
-            A[idx_right, idx_right] += 1.0  # For boundary points, set diagonal to 1 (Neumann BC)
+            # лево
+            arr = [[1, j, hx], [0, j + 1, hy], [0, j - 1, hy]]  # TODO учесть углы
+            for qq in static(ndrange(3)):
+                i1, j1, hij = arr[qq]
+                p = Wo[i1, j1] * mid(k[0, j], S[0, j], mu_o[0, j], mu_w[0, j],
+                                     k[0, j1], S[0, j1], mu_o[0, j1], mu_w[0, j1]) * area / hij
+                A[idx_left, idx_left - Nx * j] -= p
+                A[idx_left, idx_left] += p
+
+            # rhs
+            b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) / dt * volume + (1 - S[i, j]) *
+                      m[i, j] * volume * (Wo[i, j] - Wo_0[i, j]) / dt)
+
+            # право
+            arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
+            for qq in static(ndrange(4)):
+                i1, j1, hij = arr[qq]
+                p = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
+                                     k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
+                A[idx, idx + (i1 - i) + Nx * (j1 - j)] -= p
+                A[idx, idx] += p
+
+            # rhs
+            b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) / dt * volume + (1 - S[i, j]) *
+                      m[i, j] * volume * (Wo[i, j] - Wo_0[i, j]) / dt)
 
         # Добавили скважины в точки (0,0) (nx, ny)
         b[0] += Wo[0, 0] * qw * volume
