@@ -28,7 +28,7 @@ class Solver:
         self.C_p = field(dtype=f32, shape=(nx, ny))  # теплоемкость парафина
 
         # поля данных
-        self.p = field(dtype=f32, shape=(nx + 2, ny + 2))  # давление
+        self.p = field(dtype=f32, shape=(nx, ny))  # давление
         self.S = field(dtype=f32, shape=(nx, ny))  # Водонасыщенность
         self.S_0 = field(dtype=f32, shape=(nx, ny))
         self.Wo = field(dtype=f32, shape=(nx, ny))  # Массовая доля маслянного компонента в нефти
@@ -51,11 +51,10 @@ class Solver:
 
     @kernel
     def initialize(self):
-        for i, j in ndrange(self.nx + 2, self.ny + 2):
-            self.p[i, j] = init_p
 
         for i, j in ndrange(self.nx, self.ny):
             # параметры пласта
+            self.p[i, j] = init_p
             self.S[i, j] = init_S
             self.S_0[i, j] = init_S
             self.Wo[i, j] = init_Wo
@@ -119,5 +118,3 @@ class Solver:
         if isclose(idx, len(self.pressure) - 1):
             with open(output_file_name, 'wb') as f:
                 dump([self.pressure, self.saturation, self.temperature], f)
-
-
