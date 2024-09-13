@@ -6,7 +6,6 @@
 .devcontainer
 
 **/__pycache__/
-
 TempFiles/
 changelog.txt
 ~$*
