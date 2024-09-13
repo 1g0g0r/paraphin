@@ -56,15 +56,15 @@ class Solver:
             # параметры пласта
             self.p[i, j] = init_p
             self.S[i, j] = init_S
-            self.S_0[i, j] = init_S
+            self.S_0[i, j] = 0.0  # init_S
             self.Wo[i, j] = init_Wo
-            self.Wo_0[i, j] = init_Wo
+            self.Wo_0[i, j] = 0.0  # init_Wo
             self.Wp[i, j] = init_Wp
-            self.Wp_0[i, j] = init_Wp
+            self.Wp_0[i, j] = 0.0  # init_Wp
             self.Wps[i, j] = init_Wps
             self.k[i, j] = init_k
             self.m[i, j] = init_m
-            self.m_0[i, j] = init_m
+            self.m_0[i, j] = 0.0  # init_m
             self.T[i, j] = init_T
 
             # свойства флюидов
@@ -86,8 +86,8 @@ class Solver:
             self.C_p[i, j] = calc_c_p(self.T[i, j])
 
     def _update_p(self) -> None:
-        self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0, self.k,
-                               self.S, self.p, self.mu_o, self.mu_w)
+        self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0,
+                               self.k, self.S, self.mu_o, self.mu_w)
 
     def _update_s(self) -> None:
         self.S, self.S_0 = calc_saturation(self.S, self.S_0, self.p, self.k, self.m,
