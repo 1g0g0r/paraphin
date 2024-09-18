@@ -1,12 +1,12 @@
 output_file_name = 'data.pkl'
 
 # Параметры сетки
-Nx, Ny = 4, 4  # Число узлов сетки по x и y
-X_min, X_max = 0., 1.
-Y_min, Y_max = 0., 1.
+Nx, Ny = 128, 128  # Число узлов сетки по x и y
+X_min, X_max = 0., 10.
+Y_min, Y_max = 0., 10.
 hx = (X_max - X_min) / Nx
 hy = (Y_max - Y_min) / Ny
-area = hx * hy
+area: float = hx * hy
 volume = area * 1
 
 # Параметры решения

@@ -9,7 +9,7 @@ def mid(k1: types.f32, s1: types.f32, mu_o1: types.f32, mu_w1: types.f32,
     """mid(Ko + Kw)_ij"""
     x = K_o(k1, s1, mu_o1) + K_w(k1, s1, mu_w1)
     y = K_o(k2, s2, mu_o2) + K_w(k2, s2, mu_w2)
-    return 2 * x * y / (x + y)
+    return 2.0 * x * y / (x + y)
 
 
 @func

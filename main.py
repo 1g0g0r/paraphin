@@ -3,7 +3,7 @@
 from sys import stdout
 
 from numpy import linspace, isclose
-from taichi import init, cpu
+from taichi import init, cpu, vulkan
 from tqdm import tqdm
 
 init(arch=cpu)

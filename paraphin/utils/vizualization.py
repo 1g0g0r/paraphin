@@ -5,10 +5,11 @@ from taichi import GUI, tools
 
 from paraphin.utils.constants import output_file_name, Time_end, sol_time_step
 
+x_pixels = 600
+y_pixels = 600
+
 
 def visualize_solution() -> None:
-    x_pixels = 600
-    y_pixels = 600
     with open(output_file_name, 'rb') as f:
         pres, sat, temp = load(f)
 
@@ -37,15 +38,15 @@ def visualize_solution() -> None:
         for e in gui.get_events(GUI.PRESS):
             if e.key == GUI.SPACE:
                 gui.running = False
-            elif e.key == '1':
+            elif e.key == 'p':
                 data = pres[time_index]
                 min_val = min_pres
                 max_val = max_pres
-            elif e.key == '2':
+            elif e.key == 's':
                 data = sat[time_index]
                 min_val = min_sat
                 max_val = max_sat
-            elif e.key == '3':
+            elif e.key == 't':
                 data = temp[time_index]
                 min_val = min_temp
                 max_val = max_temp

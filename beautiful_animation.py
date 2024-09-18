@@ -9,7 +9,7 @@ import taichi as ti
 
 res = 512
 dt = 0.05
-p_jacobi_iters = 80
+p_jacobi_iters = 180
 f_strength = 10000.0
 curl_strength = 0
 time_c = 2
@@ -19,7 +19,7 @@ force_radius = res / 2.0
 debug = False
 
 use_sparse_matrix = False
-ti.init(arch=ti.vulkan)
+ti.init(arch=ti.cpu)
 
 
 _velocities = ti.Vector.field(2, float, shape=(res, res))
