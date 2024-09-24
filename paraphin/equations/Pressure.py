@@ -1,6 +1,6 @@
-from taichi import f32, i32, linalg, field, types, ndrange, kernel, static
 from scipy.sparse import coo_matrix
-from scipy.sparse.linalg import spsolve, gmres, norm, inv
+from scipy.sparse.linalg import spsolve
+from taichi import f32, i32, linalg, field, types, ndrange, kernel, static
 
 from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
 from paraphin.utils.utils import mid
@@ -9,6 +9,30 @@ from paraphin.utils.utils import mid
 def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКО)
+
+    Parameters
+    ----------
+    Wo: taichi.field
+        Объемная доля масляного компонента в нефти, [-]
+    Wo_0: taichi.field
+        Объемная доля масляного компонента в нефти в прошлый момент времени, [-]
+    m: taichi.field
+        Пористость, [-]
+    m_0: taichi.field
+        Пористость в прошлый момент времени, [-]
+    k: taichi.field
+        Проницаемость, [м^2]
+    S: taichi.field
+        Водоносыщенность, [-]
+    mu_o: taichi.field
+        Вязкость нефти, [Па*с]
+    mu_w: taichi.field
+        Вязкость воды, [Па*с]
+
+    Returns
+    -------
+    p: taichi.field
+        Давление, [Па]
     """
     N = Nx * Ny  # размер матрицы
     NN = (Nx - 2) * (Ny - 2) * 5 + (Nx-2) * 8 + (Ny-2) * 8 + 12  # количество ненулевых элементов
@@ -52,6 +76,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
     fill_matrix_and_rhs()
     A = coo_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
 
+    # TODO попробовать переписать под GPU
     x = spsolve(A, b.to_numpy())
     p = x.reshape((Nx, Ny))
 

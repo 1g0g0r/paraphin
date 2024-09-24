@@ -3,12 +3,12 @@ from pickle import dump
 from numpy import empty, ceil, isclose
 from taichi import f32, field, ndrange, data_oriented, kernel
 
-from paraphin.equations.calc_pressure import calc_pressure
-from paraphin.equations.calc_saturation import calc_saturation
-from paraphin.equations.calc_temperature import calc_temperature
-from paraphin.equations.calc_wps import calc_wps
+from paraphin.equations.Pressure import calc_pressure
+from paraphin.equations.Saturation import calc_saturation
+from paraphin.equations.Temperature import calc_temperature
+from paraphin.equations.wps import calc_wps
 from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
-from paraphin.utils.constants import (Nx, Ny, Time_end, sol_time_step, output_file_name, init_T,
+from paraphin.utils.constants import (Nx, Ny, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
                                       init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p)
 
 
@@ -41,16 +41,20 @@ class Solver:
         self.m_0 = field(dtype=f32, shape=(nx, ny))
         self.T = field(dtype=f32, shape=(nx, ny))  # температура [C]
 
-        # динамика образования парафина
-        self.qp: float = 0.0  # скорость отложения парафиновых отложений в общем объеме пористой породы
+        # динамика образования парафина (кольматация\суффозия)
+        self.r = field(dtype=f32, shape=len(r))
+        self.fi = field(dtype=f32, shape=(nx, nu, len(fi_0)))
+        self.qp: field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
 
         # Массив результатов
-        self.pressure = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
-        self.saturation = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
-        self.temperature = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
+        self.pres_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
+        self.sat_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
+        self.temp_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
 
     @kernel
     def initialize(self):
+        for i in ndrange(len(self.r)):
+            self.r[i] = r[i]
 
         for i, j in ndrange(self.nx, self.ny):
             # параметры пласта
@@ -75,8 +79,11 @@ class Solver:
             self.C_f[i, j] = calc_c_f(init_T)
             self.C_p[i, j] = calc_c_p(init_T)
 
+            for ij in ndrange(len(fi_0)):
+                self.fi[i, j, ij] = fi_0[ij]
+
     @kernel
-    def _update_mu_and_c(self):
+    def _update_mu_and_c_temp(self):
         for i, j in ndrange(self.nx, self.ny):
             self.mu_o[i, j] = calc_mu_o(self.T[i, j])
             self.mu_w[i, j] = calc_mu_w(self.T[i, j])
@@ -108,13 +115,13 @@ class Solver:
         self._update_wps()  # Обновлнние концентрации взвешенного парафина
         self._update_t()    # Обновление температуры
 
-        self._update_mu_and_c()
+        self._update_mu_and_c_temp()
 
     def save_results(self, idx) -> None:
-        self.pressure[idx] = self.p.to_numpy()[1:-1, 1:-1]
-        self.saturation[idx] = self.S.to_numpy()
-        self.temperature[idx] = self.T.to_numpy()
+        self.pres_arr[idx] = self.p.to_numpy()
+        self.sat_arr[idx] = self.S.to_numpy()
+        self.temp_arr[idx] = self.T.to_numpy()
 
-        if isclose(idx, len(self.pressure) - 1):
+        if isclose(idx, len(self.pres_arr) - 1):
             with open(output_file_name, 'wb') as f:
-                dump([self.pressure, self.saturation, self.temperature], f)
+                dump([self.pres_arr, self.sat_arr, self.temp_arr], f)

@@ -9,7 +9,7 @@ import taichi as ti
 
 res = 512
 dt = 0.05
-p_jacobi_iters = 180
+p_jacobi_iters = 170
 f_strength = 10000.0
 curl_strength = 0
 time_c = 2
@@ -19,7 +19,7 @@ force_radius = res / 2.0
 debug = False
 
 use_sparse_matrix = False
-ti.init(arch=ti.cpu)
+ti.init(arch=ti.vulkan)
 
 
 _velocities = ti.Vector.field(2, float, shape=(res, res))
@@ -236,6 +236,17 @@ def solve_pressure_jacobi():
     for _ in range(p_jacobi_iters):
         pressure_jacobi(pressures_pair.cur, pressures_pair.nxt)
         pressures_pair.swap()
+
+
+# @ti.kernel
+# def compare_time_setps(cur: ti.template(), next: ti.template()) -> bool:
+#     treshold = 1e-8
+#     ret = True
+#     for i, j in cur:
+#         if abs(cur[i, j] - next[i, j]) > treshold:
+#             ret = False
+#
+#     return ret
 
 
 def step(mouse_data):
