@@ -19,7 +19,7 @@ force_radius = res / 2.0
 debug = False
 
 use_sparse_matrix = False
-ti.init(arch=ti.vulkan)
+ti.init(arch=ti.cpu)
 
 
 _velocities = ti.Vector.field(2, float, shape=(res, res))

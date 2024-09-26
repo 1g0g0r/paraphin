@@ -47,12 +47,13 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
         for i, j in ndrange(Nx, Ny):
             idx = j * Nx + i
             p_sum = 0.0
+            mult = 1.0
 
             # matrix
             arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
             for qq in static(ndrange(4)):
                 i1, j1, hij = arr[qq]
-                if (0 <= i1 < Nx) and (0 <= j1 < Ny):  # TODO добавить учет 0.5 и 0.25 объема элемента
+                if (0 <= i1 < Nx) and (0 <= j1 < Ny):
                     p = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
                                          k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
                     row_indices[num] = idx
@@ -60,9 +61,12 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
                     data[num] = -p
                     p_sum += p
                     num += 1
+                else:
+                    mult *= 0.5  # учет 0.5 и 0.25 объема элемента
+
             row_indices[num] = idx
             col_indices[num] = idx
-            data[num] = p_sum
+            data[num] = p_sum * mult
             num += 1
 
             # rhs
@@ -75,12 +79,33 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
 
     fill_matrix_and_rhs()
     A = coo_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
-
-    # TODO попробовать переписать под GPU
-    x = spsolve(A, b.to_numpy())
+    A_csr = A.tocsr()
+    print()
+    print(data.to_numpy())
+    print()
+    print(row_indices.to_numpy())
+    print()
+    print(col_indices.to_numpy())
+    x = spsolve(A_csr, b.to_numpy())
     p = x.reshape((Nx, Ny))
 
+    show_plot(p)
+
     return p
+
+
+def show_plot(data):
+    import matplotlib.pyplot as plt
+    # Отображаем массив с помощью imshow
+    plt.imshow(data, cmap='viridis')
+
+    # Добавляем цветовую шкалу с дополнительными параметрами
+    cbar = plt.colorbar(orientation='horizontal', shrink=0.8)
+    cbar.set_label('Значения данных')
+
+    # Отображаем график
+    plt.show()
+
 
 
 def calc_pressure_deprecated(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):

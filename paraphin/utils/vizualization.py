@@ -60,6 +60,8 @@ def visualize_solution() -> None:
         color_data[:, :, 1] = ones_like(normalized_data) * 0.5
         color_data[:, :, 2] = 1.0 - normalized_data
 
+        #img = cm.jet(img) - цветовую карту Matplotlib ()
+
         # Масштабируем изображение под размер GUI
         resized_image = tools.imresize(color_data, x_pixels, y_pixels)
 
