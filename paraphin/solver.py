@@ -8,7 +8,7 @@ from paraphin.equations.Saturation import calc_saturation
 from paraphin.equations.Temperature import calc_temperature
 from paraphin.equations.Wps_Wp import calc_wps_wp
 from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
-from paraphin.utils.constants import (Nx, Ny, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
+from paraphin.utils.constants import (Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
                                       init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p)
 
 
@@ -44,7 +44,7 @@ class Solver:
         # динамика образования парафина (кольматация\суффозия)
         self.integr_r2_fi0 = field(dtype=f32, shape=())
         self.integr_r4_fi0 = field(dtype=f32, shape=())
-        self.r = field(dtype=f32, shape=len(r))
+        self.r = field(dtype=f32, shape=Nr)
         self.fi = field(dtype=f32, shape=(nx, ny, fi_0.shape[0]))
         self.qp: field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
 

@@ -1,5 +1,5 @@
 from scipy.sparse import coo_matrix
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import spsolve, spilu, LinearOperator, bicgstab, gmres
 from taichi import f32, i32, linalg, field, types, ndrange, kernel, static
 
 from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
@@ -62,7 +62,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
                     p_sum += p
                     num += 1
                 else:
-                    mult *= 0.5  # учет 0.5 и 0.25 объема элемента
+                    mult *= 1  # учет 0.5 и 0.25 объема элемента
 
             row_indices[num] = idx
             col_indices[num] = idx
@@ -78,19 +78,22 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
         b[N-1] += qo * volume
 
     fill_matrix_and_rhs()
-    A = coo_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
+    A = coo_matrix((data.to_numpy()*10**7, (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
     A_csr = A.tocsr()
-    print()
-    print(data.to_numpy())
-    print()
-    print(row_indices.to_numpy())
-    print()
-    print(col_indices.to_numpy())
+
+    # Неполное LU-разложение
+    # ilu = spilu(A)
+    # M = LinearOperator(A.shape, ilu.solve)
+
     x = spsolve(A_csr, b.to_numpy())
-    p = x.reshape((Nx, Ny))
+    # x = gmres(A_csr, b.to_numpy())
+    # x = bicgstab(A_csr, b.to_numpy())
 
-    show_plot(p)
+    p = x.reshape((Nx, Ny))*10**-7
+    # show_plot(p)
 
+    print()
+    print(len(p[p < 0]))
     return p
 
 
