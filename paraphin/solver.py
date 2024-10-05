@@ -55,28 +55,46 @@ class Solver:
 
     def initialize(self):
         @kernel
-        def initialize_loop(rr: types.ndarray(), fi_o: types.ndarray()):
+        def calc_integrals(rr: types.ndarray(), fi_o: types.ndarray()):
             self.integr_r2_fi0[None] = 0.0
             self.integr_r4_fi0[None] = 0.0
 
-            for i in ndrange(rr.shape[0]):
+            self.r[0] = rr[0]
+            r3_old = rr[0] ** 3
+            r4_old = rr[0] ** 4
+            r5_old = rr[0] ** 5
+            r6_old = rr[0] ** 6
+            for i in ndrange(1, rr.shape[0]):
                 self.r[i] = rr[i]
-                self.integr_r2_fi0[None] += 0.0  # TODO заменить на вычисление
-                self.integr_r4_fi0[None] += 0.0
+                dr = rr[i] - rr[i - 1]
+                r3_new = rr[i] ** 3
+                r4_new = rr[i] ** 4
+                r5_new = rr[i] ** 5
+                r6_new = rr[i] ** 6
+                a = (fi_o[i - 1] * r[i] - fi_0[i] * r[i - 1]) / dr
+                b = (fi_0[i] - fi_0[i - 1]) / dr
+                self.integr_r2_fi0[None] += (r3_new - r3_old) * a / 3 + (r4_new - r4_old) * b / 4  # r^2 * fi
+                self.integr_r4_fi0[None] += (r5_new - r5_old) * a / 5 + (r6_new - r6_old) * b / 6  # r^4 * fi
+                r3_old = r3_new
+                r4_old = r4_new
+                r5_old = r5_new
+                r6_old = r6_new
 
+        @kernel
+        def initialize_params_loop(fi_o: types.ndarray()):
             for i, j in ndrange(self.nx, self.ny):
                 # параметры пласта
                 self.p[i, j] = init_p
                 self.S[i, j] = init_S
-                self.S_0[i, j] = 0.0  # init_S
+                self.S_0[i, j] = init_S
                 self.Wo[i, j] = init_Wo
-                self.Wo_0[i, j] = 0.0  # init_Wo
+                self.Wo_0[i, j] = init_Wo
                 self.Wp[i, j] = init_Wp
-                self.Wp_0[i, j] = 0.0  # init_Wp
+                self.Wp_0[i, j] = init_Wp
                 self.Wps[i, j] = init_Wps
                 self.k[i, j] = init_k
                 self.m[i, j] = init_m
-                self.m_0[i, j] = 0.0  # init_m
+                self.m_0[i, j] = init_m
                 self.T[i, j] = init_T
 
                 # свойства флюидов
@@ -90,7 +108,8 @@ class Solver:
                 for ij in ndrange(fi_o.shape[0]):
                     self.fi[i, j, ij] = fi_o[ij]
 
-        initialize_loop(rr=r, fi_o=fi_0)
+        calc_integrals(rr=r, fi_o=fi_0)
+        initialize_params_loop(fi_o=fi_0)
 
     @kernel
     def _update_mu_and_c_temp(self):

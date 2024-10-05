@@ -15,6 +15,9 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (field(dtype=f32, shape
             temp_val = 0.0
             S_0[i, j] = S[i, j]
             arr = [[i+1, j, hx], [i-1, j, hx], [i, j+1, hy], [i, j-1, hy]]
+
+            # расчет средней скорости воды
+            # вопрос Vx Vy
             for idx in static(ndrange(4)):
                 i1, j1, hij = arr[idx]
                 temp_val += up_kw(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],

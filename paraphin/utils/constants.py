@@ -6,8 +6,8 @@ output_file_name = 'data.pkl'
 
 # Параметры сетки
 Nx, Ny = 128, 128  # Число узлов сетки по x и y
-X_min, X_max = 0., 10.
-Y_min, Y_max = 0., 10.
+X_min, X_max = 0., 1.
+Y_min, Y_max = 0., 1.
 hx = (X_max - X_min) / Nx
 hy = (Y_max - Y_min) / Ny
 area: float = hx * hy
@@ -15,7 +15,7 @@ volume = area * 1
 
 # Параметры решения
 Time_end = 1.
-dt = 0.00001
+dt = 0.0001
 sol_time_step = 0.1
 
 # Физические параметры задачи
