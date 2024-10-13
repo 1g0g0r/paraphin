@@ -19,7 +19,7 @@ def calc_wps_wp(qp, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w, T) -> (fiel
             temp_val = 0.0
             arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
             for idx in static(ndrange(4)):
-                i1, j1, hij = arr[idx]
+                i1, j1, hij = arr[idx[0]]
                 # TODO кешировать такие вычисления
                 temp_val += up_ko(k[i, j], S[i, j], p[i, j], mu_o[i, j], mu_w[i, j],
                                   k[i1, j1], S[i1, j1], p[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * \

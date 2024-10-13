@@ -61,18 +61,18 @@ class Solver:
 
             self.r[0] = rr[0]
             r3_old = rr[0] ** 3
-            r4_old = rr[0] ** 4
-            r5_old = rr[0] ** 5
-            r6_old = rr[0] ** 6
-            for i in ndrange(1, rr.shape[0]):
+            r4_old = rr[0] * r3_old
+            r5_old = rr[0] * r4_old
+            r6_old = rr[0] * r5_old
+            for i in ndrange((1, rr.shape[0])):
                 self.r[i] = rr[i]
                 dr = rr[i] - rr[i - 1]
                 r3_new = rr[i] ** 3
-                r4_new = rr[i] ** 4
-                r5_new = rr[i] ** 5
-                r6_new = rr[i] ** 6
-                a = (fi_o[i - 1] * r[i] - fi_0[i] * r[i - 1]) / dr
-                b = (fi_0[i] - fi_0[i - 1]) / dr
+                r4_new = rr[i] * r3_new
+                r5_new = rr[i] * r4_new
+                r6_new = rr[i] * r5_new
+                a = (fi_o[i - 1] * rr[i] - fi_o[i] * rr[i - 1]) / dr
+                b = (fi_o[i] - fi_o[i - 1]) / dr
                 self.integr_r2_fi0[None] += (r3_new - r3_old) * a / 3 + (r4_new - r4_old) * b / 4  # r^2 * fi
                 self.integr_r4_fi0[None] += (r5_new - r5_old) * a / 5 + (r6_new - r6_old) * b / 6  # r^4 * fi
                 r3_old = r3_new

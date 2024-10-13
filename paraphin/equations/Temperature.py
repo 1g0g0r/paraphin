@@ -19,7 +19,7 @@ def calc_temperature(T, m, S, C_o, C_w, C_f, C_p, Wp, Wps, p, k, mu_o, mu_w) -> 
             # цикл по граням
             arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
             for idx in static(ndrange(4)):
-                i1, j1, hij = arr[idx]
+                i1, j1, hij = arr[idx[0]]
                 temp_val = mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
                                k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * (p[i, j] - p[i1, j1]) / hij
 

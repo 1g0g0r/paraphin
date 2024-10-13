@@ -52,7 +52,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
             # matrix
             arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
             for qq in static(ndrange(4)):
-                i1, j1, hij = arr[qq]
+                i1, j1, hij = arr[qq[0]]
                 if (0 <= i1 < Nx) and (0 <= j1 < Ny):
                     p = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
                                          k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
@@ -70,30 +70,30 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
             num += 1
 
             # rhs
-            b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) / dt * volume + (1 - S[i, j]) *
-                      m[i, j] * volume * (Wo[i, j] - Wo_0[i, j]) / dt)
+            b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) + (1 - S[i, j]) *
+                      m[i, j] * (Wo[i, j] - Wo_0[i, j])) * volume * mult / dt
 
-        # Добавили скважины в точки (0,0) (nx, ny)
-        b[0] += Wo[0, 0] * qw * volume
-        b[N-1] += qo * volume
+            # Добавили скважины в точки (0,0) (nx, ny)
+        b[0] += Wo[0, 0] * qw  # * 0.25
+        b[N-1] += qo  # * 0.25
 
     fill_matrix_and_rhs()
-    A = coo_matrix((data.to_numpy()*10**7, (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
+    A = coo_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
     A_csr = A.tocsr()
 
     # Неполное LU-разложение
     # ilu = spilu(A)
     # M = LinearOperator(A.shape, ilu.solve)
 
-    x = spsolve(A_csr, b.to_numpy())
+    # x = spsolve(A_csr, b.to_numpy())
     # x = gmres(A_csr, b.to_numpy())
-    # x = bicgstab(A_csr, b.to_numpy())
+    x = bicgstab(A_csr, b.to_numpy())[0]
 
-    p = x.reshape((Nx, Ny))*10**-7
+    p = x.reshape((Nx, Ny))
     # show_plot(p)
 
     print()
-    print(len(p[p < 0]))
+    print(len(p[p < 0]), len(x))
     return p
 
 
@@ -126,7 +126,7 @@ def calc_pressure_deprecated(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=
             # matrix
             arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
             for qq in static(ndrange(4)):
-                i1, j1, hij = arr[qq]
+                i1, j1, hij = arr[qq[0]]
                 if (0 <= i1 < Nx) and (0 <= j1 < Ny):  # TODO добавить учет 0.5 и 0.25 объема элемента
                     p = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
                                      k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
