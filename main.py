@@ -6,7 +6,7 @@ from numpy import linspace, isclose
 from taichi import init, cpu, vulkan
 from tqdm import tqdm
 
-init(arch=vulkan)
+init(arch=cpu)
 
 from paraphin.solver import Solver
 from paraphin.utils.constants import Time_end, dt, sol_time_step

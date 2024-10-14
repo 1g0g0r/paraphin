@@ -33,33 +33,35 @@ def calc_qp(Wps, Um, m, fi, r) -> field(dtype=f32, shape=(Nx, Ny)):
     u_r = zeros(Nr, dtype=float32)
     u_b = zeros(Nr, dtype=float32)
     u_c = zeros(Nr, dtype=float32)
+
     @kernel
     def calc_qp_loop():
 
-        for i, j in ndrange(Nx, Ny):
+        for i in ndrange(Nx):
+            for i, j in ndrange(Ny):
 
-            # Расчет скоростей Ur, Ub, Uc
-            for ij in ndrange(Nr):
-                u_r[ij] = u_r(Wps[i,j], Um[i,j], r[ij])
-                u_b[ij] = u_b(Um[i,j], Wps[i,j], fi[i,j,ij], r[ij])
-                u_c[ij] = u_c(Wps[i,j], fi[i,j,ij], Um[i,j])
+                # Расчет скоростей Ur, Ub, Uc
+                for ij in ndrange(Nr):
+                    u_r[ij] = u_r(Wps[i,j], Um[i,j], r[ij])
+                    u_b[ij] = u_b(Um[i,j], Wps[i,j], fi[i,j,ij], r[ij])
+                    u_c[ij] = u_c(Wps[i,j], fi[i,j,ij], Um[i,j])
 
-            # Расчет интегралов qp1, qp2, kf, mf
-            qp1 = 0.0
-            qp2 = 0.0
-            kf = 0.0
-            mf = 0.0
-            for ij in ndrange(1, Nr):
-                dr = r[ij] - r[ij-1]
-                a = (fi[i,j,ij-1] * r[ij] - fi[i,j,ij] * r[ij-1]) / dr
-                b = (fi[i,j,ij] - fi[i,j,ij-1]) / dr
-                qp1 = ...
-                qp2 = ...
-                kf = ...
-                mf = ...
+                # Расчет интегралов qp1, qp2, kf, mf
+                qp1 = 0.0
+                qp2 = 0.0
+                kf = 0.0
+                mf = 0.0
+                for ij in ndrange(1, Nr):
+                    dr = r[ij] - r[ij-1]
+                    a = (fi[i,j,ij-1] * r[ij] - fi[i,j,ij] * r[ij-1]) / dr
+                    b = (fi[i,j,ij] - fi[i,j,ij-1]) / dr
+                    qp1 = ...
+                    qp2 = ...
+                    kf = ...
+                    mf = ...
 
-            for ij in ndrange(1, Nr):
-                fi[i, j] = upd_fi(fi[i, j, ij], u_r[i, j], fi[i, j, ij - 1], u_r[ij - 1], r[ij] - r[ij - 1], u_b[ij])
+                for ij in ndrange(1, Nr):
+                    fi[i, j] = upd_fi(fi[i, j, ij], u_r[i, j], fi[i, j, ij - 1], u_r[ij - 1], r[ij] - r[ij - 1], u_b[ij])
 
     calc_qp_loop()
 
