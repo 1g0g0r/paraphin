@@ -1,6 +1,3 @@
-from imp import new_module
-
-import pickle
 from numpy import dot, zeros_like, pi
 from numpy.linalg import norm
 from scipy.sparse import csr_matrix
@@ -48,7 +45,7 @@ def calc_pressure():
                     # matrix
                     arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
                     for qq in static(ndrange(4)):
-                        i1, j1, hij = arr[qq[0]]
+                        i1, j1, hij = arr[qq]
                         p = 1.0 / hij / hij
                         row_indices[num] = idx
                         col_indices[num] = idx + (i1-i) + Nx * (j1-j)
@@ -71,9 +68,7 @@ def calc_pressure():
 
     # print(A_csr.toarray())
 
-    # x = spsolve(A_csr, b.to_numpy())
-    # x = gmres(A_csr, b.to_numpy())[0]
-    x = bicgstab(A_csr, b.to_numpy())[0]
+    x = spsolve(A_csr, b.to_numpy())
     # x = my_bicgstab(A_csr, b.to_numpy())
 
     p = x.reshape((Nx, Ny))
@@ -173,4 +168,8 @@ def my_bicgstab(A, b, x0=None, tol=1e-5, max_iter=1000):
 
 
 if __name__ == '__main__':
-    calc_pressure()
+    from time import time
+    t = time()
+    ret = calc_pressure()
+    print(time()-t)
+

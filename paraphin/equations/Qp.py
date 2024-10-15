@@ -6,7 +6,7 @@ from paraphin.utils.constants import (Nx, Ny, Nr, hx, hy, dt, ro_p, ro_o, volume
 from paraphin.utils.utils import up_ko, mid
 
 
-def calc_qp(Wps, Um, m, fi, r) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_qp(Wps, Um, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> field(dtype=f32, shape=(Nx, Ny)):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
 
@@ -22,6 +22,10 @@ def calc_qp(Wps, Um, m, fi, r) -> field(dtype=f32, shape=(Nx, Ny)):
         Функция распределения пор по размеру
     r: taichi.field(Nr)
         Радиусы пор
+    integr_r2_fi0: float
+        Интеграл r^2 * fi_o(r)
+    integr_r4_fi0: float
+        Интеграл r^4 * fi_o(r)
 
     Returns
     -------
@@ -38,7 +42,7 @@ def calc_qp(Wps, Um, m, fi, r) -> field(dtype=f32, shape=(Nx, Ny)):
     def calc_qp_loop():
 
         for i in ndrange(Nx):
-            for i, j in ndrange(Ny):
+            for j in ndrange(Ny):
 
                 # Расчет скоростей Ur, Ub, Uc
                 for ij in ndrange(Nr):
@@ -51,12 +55,14 @@ def calc_qp(Wps, Um, m, fi, r) -> field(dtype=f32, shape=(Nx, Ny)):
                 qp2 = 0.0
                 kf = 0.0
                 mf = 0.0
+                r3_old = rr[0] ** 3
+                r4_old = rr[0] * r3_old
                 for ij in ndrange(1, Nr):
                     dr = r[ij] - r[ij-1]
                     a = (fi[i,j,ij-1] * r[ij] - fi[i,j,ij] * r[ij-1]) / dr
                     b = (fi[i,j,ij] - fi[i,j,ij-1]) / dr
-                    qp1 = ...
-                    qp2 = ...
+                    qp1 = ...  # вопрос нужно ли использовать u_r(r) интегрировании
+                    qp2 = ... # вопрос нужно ли использовать u_b(r) интегрировании
                     kf = ...
                     mf = ...
 
@@ -78,10 +84,10 @@ def u_r(wps: float, Um: float, r: flaot) -> float:
         Объемная концентрация взвешенных частиц парафина, [м3/м3]
     Um: float
         Среднее значение скорости жидкости в канале, [м/сут]
-    D: float
-        Размер частицы (диаметр частицы), [м]
     r: float
         Радиус капилляра, [м]
+    D: float
+        Размер частицы (диаметр частицы), [м]
     h: float
         толщина осадочного слоя, [м]
     Lk: float
