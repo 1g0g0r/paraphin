@@ -1,21 +1,24 @@
-from taichi import f32, field, ndrange, func, kernel, static, exp
-from numpy import zeros, float32
+from taichi import f32, field, ndrange, func, kernel, static
+from numpy import zeros, float32, gradient
+from numpy.linalg import norm
 
-from paraphin.utils.constants import (Nx, Ny, Nr, hx, hy, dt, ro_p, ro_o, volume, area, Tm,
-                                      D, gamma, betta, Diff)
+from .Velocitys import u_c, u_b, u_r
+from paraphin.utils.constants import (Nx, Ny, Nr, hx, hy, dt, ro_p, ro_o, volume, area)
 from paraphin.utils.utils import up_ko, mid
 
 
-def calc_qp(Wps, Um, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_qp(p, Wps, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
+                                                                field(dtype=f32, shape=(Nx, Ny)),
+                                                                field(dtype=f32, shape=(Nx, Ny))):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
 
     Parameters
     ----------
+    p: taichi.field(Nx, Ny)
+        Давление
     Wps: taichi.field(Nx, Ny)
         Концентрации взвешенных частиц парафина
-    Um: taichi.field(Nx, Ny)
-        Концентрация растворенного парафина
     m: taichi.field(Nx, Ny)
         Пористость
     fi: taichi.field(Nx, Ny, Nr)
@@ -37,6 +40,8 @@ def calc_qp(Wps, Um, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> field(dtype=f32,
     u_r = zeros(Nr, dtype=float32)
     u_b = zeros(Nr, dtype=float32)
     u_c = zeros(Nr, dtype=float32)
+
+    dp = norm(gradient(p.to_numpy()), axis=0)
 
     @kernel
     def calc_qp_loop():
@@ -72,107 +77,6 @@ def calc_qp(Wps, Um, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> field(dtype=f32,
     calc_qp_loop()
 
     return qp
-
-
-@func
-def u_r(wps: float, Um: float, r: flaot) -> float:
-    """Скорость изменения радиуса капилляра.
-
-    Parameters
-    ----------
-    wps: float
-        Объемная концентрация взвешенных частиц парафина, [м3/м3]
-    Um: float
-        Среднее значение скорости жидкости в канале, [м/сут]
-    r: float
-        Радиус капилляра, [м]
-    D: float
-        Размер частицы (диаметр частицы), [м]
-    h: float
-        толщина осадочного слоя, [м]
-    Lk: float
-        средняя длина капилляра, [м]
-    gamma: float
-        Отношение радиуса горла к радиусу канала
-    delta: float
-        Кинетическая константа суффозии, [1/м]
-    diff: float
-        Коэффициент диффузионного осаждения частиц, [м2/сек]
-
-    Returns
-    -------
-    Ur: float
-        Скорость изменения радиуса капилляра, [м/сут]
-    """
-    if 2 * r * gamma < D:
-        Ur = 0.0
-    else:
-        # Сужение(кольматация)
-        Ur = -wps * (2 * Um * (86400 * diff) ** 2 / (r * Lk)) ** (1/3)
-
-        # Расширение(суффозия) каналов
-        if Um > Uk and h > 0:
-            Ur += delta * (Um - Uk) * h * (r + h * 0.5) / r
-
-    return Ur
-
-
-@func
-def u_b(Um: float, wps: float, fi: float, r: float) -> float:
-    """Скорость блокирования капилляров.
-
-    Parameters
-    ----------
-    Um: float
-        Средняя скорость жидкости в капилляре, [м/сут]
-    wps: float
-        Концентрация частиц в потоке, [м3/м3]
-    r: float
-        Радиус капилляра, [м]
-    fi: float
-        Значение функции распределения пор по размерам
-    D: float
-        Размер частицы (диаметр частицы), [м]
-    betta: float
-         Коэффициент формы частицы (beta<=1)
-    gamma: float
-        Отношение радиуса горла к радиусу канала
-
-    Returns
-    -------
-    Ub: float
-        Скорость блокирования капилляров, [м/сут]
-    """
-    if 2.0 * gamma * r <= D:
-        return 6.0 * betta * wps * r * r * fi * Um / D**3
-    else:
-        return 0.0
-
-
-@func
-def u_c(wps: float, fi: float, Um: float) -> float:
-    """Критическая скорость
-
-    Parameters
-    ----------
-    wps: float
-        Концентрация частиц в потоке, [м3/м3]
-    fi: float
-        Значение функции распределения пор по размерам
-    Um: float
-        Средняя скорость жидкости в капилляре, [м/сут]
-    nu: float
-        Объем частицы
-
-    Return
-    ------
-    uc: float
-        Критическая скорость
-    """
-    if r <= r_max:
-        return - beta * wps * fi * Um / nu
-    else:
-        return 0.0
 
 
 @func

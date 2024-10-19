@@ -10,3 +10,4 @@ TempFiles/
 changelog.txt
 ~$*
 *.pkl
+*.html

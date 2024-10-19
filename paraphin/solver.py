@@ -3,13 +3,10 @@ from pickle import dump
 from numpy import empty, ceil, isclose
 from taichi import f32, field, ndrange, data_oriented, kernel, types
 
-from paraphin.equations.Pressure import calc_pressure
-from paraphin.equations.Saturation import calc_saturation
-from paraphin.equations.Temperature import calc_temperature
-from paraphin.equations.Wps_Wp import calc_wps_wp
+from paraphin.equations import (calc_qp, calc_pressure, calc_saturation, calc_temperature, calc_wps_wp)
 from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
 from paraphin.utils.constants import (Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
-                                      init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p)
+                                      init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p, init_qp)
 
 
 @data_oriented
@@ -46,7 +43,7 @@ class Solver:
         self.integr_r4_fi0 = field(dtype=f32, shape=())
         self.r = field(dtype=f32, shape=Nr)
         self.fi = field(dtype=f32, shape=(nx, ny, fi_0.shape[0]))
-        self.qp: field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
+        self.qp = field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
 
         # Массив результатов
         self.pres_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
@@ -96,6 +93,7 @@ class Solver:
                 self.m[i, j] = init_m
                 self.m_0[i, j] = init_m
                 self.T[i, j] = init_T
+                self.qp[i, j] = init_qp
 
                 # свойства флюидов
                 self.mu_o[i, j] = calc_mu_o(init_T)
@@ -137,14 +135,19 @@ class Solver:
         self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
                                   self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
+    def _update_qp_m_k(self):
+        self.qp, self.m, self.k = calc_qp(self.p, self.Wps, self.m, self.fi, self.r,
+                                          self.integr_r2_fi0, self.integr_r4_fi0)
+
     def upd_time_step(self) -> None:
         """Метод IMPES: явный по насыщенности и неявный по давления"""
         self._update_p()  # Обновление давления
         self._update_s()  # Обновление насыщенности
         self._update_wps_wp()  # Обновлнние концентрации взвешенного парафина
         self._update_t()    # Обновление температуры
+        self._update_qp_m_k()  # Обновление объема выделяемого парафина, пористости, проницаемости
 
-        # self._update_mu_and_c_temp()
+        # self._update_mu_and_c_temp()  # Обновление свойств веществ ввиду изменения температуры
 
     def save_results(self, idx) -> None:
         self.pres_arr[idx] = self.p.to_numpy()

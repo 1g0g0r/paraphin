@@ -1,6 +1,6 @@
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
-from taichi import f32, i32, field, types, ndrange, kernel, static
+from taichi import f32, i32, field, ndrange, kernel, static
 
 from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
 from paraphin.utils.utils import mid
@@ -34,6 +34,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
     p: taichi.field
         Давление, [Па]
     """
+    p = field(dtype=f32, shape=(Nx, Ny))
     N = Nx * Ny  # размер матрицы
     NN = (Nx - 2) * (Ny - 2) * 5 + (Nx-2) * 8 + (Ny-2) * 8 + 12  # количество ненулевых элементов
     data = field(f32, shape=NN)
@@ -81,14 +82,18 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
     A_csr = csr_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
 
     x = spsolve(A_csr, b.to_numpy())
-    p = x.reshape((Nx, Ny))
 
-    show_plot(p, 'plotly')
+    # import pyamg
+    # ml = pyamg.ruge_stuben_solver(A_csr)  # construct the multigrid hierarchy
+    # xx = ml.solve(b.to_numpy(), tol=1e-10)
 
+    # show_plot(x, 'plotly')
+    p.from_numpy(x.reshape((Nx, Ny)))
     return p
 
 
-def show_plot(data, type):
+def show_plot(x, type):
+    data = x.reshape((Nx, Ny))
     if type == 'mpl':
         import matplotlib.pyplot as plt
         # Отображаем массив с помощью imshow
@@ -118,7 +123,7 @@ def show_plot(data, type):
 
         # Настраиваем отображение графика
         fig.update_layout(
-            title='Двумерное поле данных',
+            title='Поле давления',
             xaxis_title='X',
             yaxis_title='Y',
             width=800,
