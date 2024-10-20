@@ -1,6 +1,7 @@
 from pickle import dump
 
 from numpy import empty, ceil, isclose
+from concurrent.futures import ProcessPoolExecutor
 from taichi import f32, field, ndrange, data_oriented, kernel, types
 
 from paraphin.equations import (calc_qp, calc_pressure, calc_saturation, calc_temperature, calc_wps_wp)
@@ -124,18 +125,22 @@ class Solver:
                                self.k, self.S, self.mu_o, self.mu_w)
 
     def _update_s(self) -> None:
+        # TODO убрать self.p
         self.S, self.S_0 = calc_saturation(self.S, self.S_0, self.p, self.k, self.m,
                                            self.m_0, self.mu_o, self.mu_w)
 
     def _update_wps_wp(self) -> None:
+        # TODO убрать self.Wps, self.Wp
         self.Wps, self.Wp = calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
                                         self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
 
     def _update_t(self) -> None:
+        # TODO убрать self.T
         self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
                                   self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
     def _update_qp_m_k(self):
+        # TODO убрать self.qp, self.m, self.k
         self.qp, self.m, self.k = calc_qp(self.p, self.Wps, self.m, self.fi, self.r,
                                           self.integr_r2_fi0, self.integr_r4_fi0)
 
@@ -146,6 +151,28 @@ class Solver:
         self._update_wps_wp()  # Обновлнние концентрации взвешенного парафина
         self._update_t()    # Обновление температуры
         self._update_qp_m_k()  # Обновление объема выделяемого парафина, пористости, проницаемости
+
+        # TODO проверить (мб добавить условие на размер сетки)
+        """
+        self._update_p()  # Обновление давления
+        with ProcessPoolExecutor() as executor:
+            # Запускаем задачи параллельно
+            sat = executor.submit(self._update_s())  # Обновление насыщенности
+            wps_wp = executor.submit(self._update_wps_wp())  # Обновлнние концентрации взвешенного парафина
+            temp = executor.submit(self._update_t())    # Обновление температуры
+            qp_m_k = executor.submit(self._update_qp_m_k())  # Обновление объема выделяемого парафина, пористости, проницаемости
+    
+            # Получаем результаты вычислений
+            new_s = sat.result()
+            new_wps_wp = wps_wp.result()
+            new_t = temp.result()
+            new_qp_m_k = qp_m_k.result()
+            
+        # Обновление полей данных 
+        for ...
+        S, S_0 = new_s, S
+        ...
+        """
 
         # self._update_mu_and_c_temp()  # Обновление свойств веществ ввиду изменения температуры
 
