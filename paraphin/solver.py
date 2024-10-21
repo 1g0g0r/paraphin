@@ -156,10 +156,10 @@ class Solver:
 
         with ProcessPoolExecutor() as executor:
             # Запускаем задачи параллельно
-            sat    = executor.submit(self._update_s())       # Обновление насыщенности
-            wps_wp = executor.submit(self._update_wps_wp())  # Обновление концентрации взвешенного парафина
-            temp   = executor.submit(self._update_t())       # Обновление температуры
-            qp_m_k = executor.submit(self._update_qp_m_k())  # Обновление объема выделяемого парафина, пористости, проницаемости
+            sat    = executor.submit(self._update_s)       # Обновление насыщенности
+            wps_wp = executor.submit(self._update_wps_wp)  # Обновление концентрации взвешенного парафина
+            temp   = executor.submit(self._update_t)       # Обновление температуры
+            qp_m_k = executor.submit(self._update_qp_m_k)  # Обновление объема выделяемого парафина, пористости, проницаемости
     
             # Получаем результаты вычислений
             new_s = sat.result()
