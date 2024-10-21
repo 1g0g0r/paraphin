@@ -4,18 +4,20 @@ from paraphin.constants import S_min, S_max
 
 
 @func
-def pf_o(s, mu_o):
+def pf_o(s):
     """
     Функция отностельной фазовой проницаемости нефти
-        [(Smax-S)/(Smax-Smin)]**2/mu_o
+        [(Smax-S)/(Smax-Smin)]**2
     """
-    return ((s - S_min) / (S_max-S_min)) ** 2 / mu_o
+    # TODO спросить про значения, выходяящие за границы [Smin, Smax]
+    return ((S_max - s) / (S_max-S_min)) ** 2
 
 
 @func
-def pf_w(s, mu_w):
+def pf_w(s):
     """
     Функция отностельной фазовой проницаемости воды
-        [(S-Smin)/(Smax-Smin)]**Pw/Vw
+        [(S-Smin)/(Smax-Smin)]**2
     """
-    return ((1 - s - S_min) / (S_max-S_min)) ** 2 / mu_w
+    # TODO спросить про значения, выходяящие за границы [Smin, Smax]
+    return ((s - S_min) / (S_max-S_min)) ** 2

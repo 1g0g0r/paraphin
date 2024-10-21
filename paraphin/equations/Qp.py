@@ -1,12 +1,14 @@
+from math import gamma
+
 from numpy import zeros, float32, gradient
 from numpy.linalg import norm
 from taichi import f32, field, ndrange, func, kernel
 
-from paraphin.constants import (Nx, Ny, Nr, dt, ro_o, eta)
+from paraphin.constants import Nx, Ny, Nr, dt, ro_o, eta, D, gamma
 from .Velocitys import u_c, u_b, u_r
 
 
-def calc_qp(p, Wps, mu_o, m, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
+def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
                                                                         field(dtype=f32, shape=(Nx, Ny)),
                                                                         field(dtype=f32, shape=(Nx, Ny))):
     """
@@ -20,6 +22,8 @@ def calc_qp(p, Wps, mu_o, m, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (fi
         Концентрации взвешенных частиц парафина
     m: taichi.field(Nx, Ny)
         Пористость
+    qp: taichi.field(Nx, Ny)
+        Скорость отложения парафина в общем объеме
     fi: taichi.field(Nx, Ny, Nr)
         Функция распределения пор по размеру
     h_sloy: taichi.field(Nx, Ny, Nr)
@@ -38,10 +42,14 @@ def calc_qp(p, Wps, mu_o, m, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (fi
     fi: taichi.field(Nx, Ny, Nr)
         Обновленная функция распределения пор по размеру
     """
-    ur = zeros(Nr, dtype=float32)
-    ub = zeros(Nr, dtype=float32)
-    uc = zeros(Nr, dtype=float32)
+    k_mult = field(dtype=f32, shape=(nx, ny))
+    m_mult = field(dtype=f32, shape=(nx, ny))
 
+    r2 = rr ** 2
+    r3 = r2 * rr
+    r4 = r3 * rr
+    r5 = r4 * rr
+    r6 = r5 * rr
 
     Um_r2 = norm(gradient(p.to_numpy()), axis=0) * 0.125 / eta / mu_o.to_numpy()
 
@@ -50,34 +58,52 @@ def calc_qp(p, Wps, mu_o, m, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (fi
 
         for i in ndrange(Nx):
             for j in ndrange(Ny):
-
-                # Расчет скоростей Ur, Ub, Uc
-                for ij in ndrange(Nr):
-                    u_m = Um_r2[i, j] * r[ij] * r[ij]
-                    # TODO спросить про осадочный слой
-                    ur[ij] = u_r(Wps[i,j], Um[i,j], r[ij], h_sloy)
-                    ub[ij] = u_b(Um[i,j], Wps[i,j], fi[i,j,ij], r[ij])
-                    uc[ij] = u_c(r[ij], mu_o[i,j], ro_o[i, j])
-                    h_sloy[i, j, ij] = sed_h(h_sloy[i, j, ij], ur, r)
-
-                # Расчет интегралов qp1, qp2, kf, mf
                 qp1 = 0.0
                 qp2 = 0.0
-                kf = 0.0
-                mf = 0.0
-                r3_old = rr[0] ** 3
-                r4_old = rr[0] * r3_old
-                for ij in ndrange(1, Nr):
-                    dr = r[ij] - r[ij-1]
-                    a = (fi[i,j,ij-1] * r[ij] - fi[i,j,ij] * r[ij-1]) / dr
-                    b = (fi[i,j,ij] - fi[i,j,ij-1]) / dr
-                    qp1 = ...  # вопрос нужно ли использовать u_r(r) интегрировании
-                    qp2 = ... # вопрос нужно ли использовать u_b(r) интегрировании
-                    kf = ...
-                    mf = ...
+                r2fi = 0.0
+                r4fi = 0.0
+
+                # Расчет скоростей Ur, Ub, Uc
+                um = Um_r2[i, j] * r2[0]
+                # TODO спросить про осадочный слой - что первее вычисляется ?
+                ur = u_r(Wps[i,j], um, r[0], h_sloy[i, j, 0])
+                ub = u_b(um, Wps[i,j], fi[i,j,0], r[0])
+                uc = u_c(r[0], mu_o[i,j], ro_o[i, j])
+                h_sloy[i, j, 0] = sed_h(h_sloy[i, j, 0], ur, r[0])
 
                 for ij in ndrange(1, Nr):
-                    fi[i, j] = upd_fi(fi[i, j, ij], u_r[i, j], fi[i, j, ij - 1], u_r[ij - 1], r[ij] - r[ij - 1], u_b[ij])
+                    um_new = Um_r2[i, j] * r2[ij]
+                    ur_new = u_r(Wps[i, j], um_new, r[ij], h_sloy[i, j, ij])
+                    ub_new = u_b(um_new, Wps[i, j], fi[i, j, ij], r[ij])
+                    uc_new = u_c(r[ij], mu_o[i, j], ro_o[i, j])  # где используется крит скорость ??
+                    h_sloy[i, j, ij] = sed_h(h_sloy[i, j, ij], ur_new, r[ij])
+
+                    dr = r[ij] - r[ij-1]
+                    A_fi = (fi[i,j,ij-1] * r[ij] - fi[i,j,ij] * r[ij-1]) / dr
+                    B_fi = (fi[i,j,ij] - fi[i,j,ij-1]) / dr
+                    A_ur = (ur * r[ij] - ur_new * r[ij - 1]) / dr
+                    B_ur = (ur_new - ur) / dr
+
+                    qp1 += (r3[ij] - r3[ij-1]) * A_ur / 3 + (r4[ij] - r4[ij-1]) * B_ur / 4
+                    r2fi += (r3[ij] - r3[ij-1]) * A_fi / 3 + (r4[ij] - r4[ij-1]) * B_fi / 4
+                    r4fi += (r5[ij] - r5[ij-1]) * A_fi / 5 + (r6[ij] - r6[ij-1]) * B_fi / 6
+                    if r[ij] <= D * 0.5 / gamma:
+                        A_ub = (ub * r[ij] - ub_new * r[ij - 1]) / dr
+                        B_ub = (ub_new - ub) / dr
+                        qp2 +=  ((r2[ij] - r2[ij-1]) * B_fi * B_ur / 2 + (r4[ij] - r4[ij-1]) * A_fi * A_ur / 4 +
+                                 (r3[ij] - r3[ij-1]) * (A_fi * B_ur + B_fi * A_ur) / 3)
+
+                    # Обновление скоростей
+                    um = um_new
+                    ur = ur_new
+                    ub = ub_new
+
+                    # TODO уточнить когда обновляется
+                    # fi[i, j, ij] = upd_fi(fi[i, j, ij], ur_new, fi[i, j, ij - 1], ur, r[ij] - r[ij - 1], ub)
+
+                qp[i, j] = m[i, j] * (2.0 * qp1 + Wps[i, j] * qp2)
+                m_mult[i, j] = kf / integr_r2_fi0
+                k_mult[i, j] = mf / integr_r4_fi0
 
     calc_qp_loop()
 
@@ -102,7 +128,7 @@ def upd_fi(fi: float, Ur: float, fi1: float, Ur1: float, dr: float, Ub: float) -
     dr: float
         r[i]-r[i-1] - шаг дискретизации
     Ub: float
-        ub[i] - Скорость блокирования капилляров, [м/сут]
+        ub[i] - Скорость блокирования капилляров, [м/с]
 
     Returns
     -------
@@ -114,7 +140,25 @@ def upd_fi(fi: float, Ur: float, fi1: float, Ur1: float, dr: float, Ub: float) -
     return fi
 
 
+@func
 def sed_h(h0, ur, r):
+    """
+    Вычисление толщины осадочного слоя.
+
+    Parameters
+    ----------
+    h0: float
+        Толщина осадочного слоя, [m].
+    ur: float
+        Скорость изменения радиуса капилляра, [m/c]
+    r: float
+        Радиус капилляра, [m].
+
+    Returns
+    -------
+    hr: float
+        Толщина осадочного слоя, [m].
+    """
     hr = h0 - dt * ur
     hr = max(0.0, min(hr, r - 1e-7))
     return hr

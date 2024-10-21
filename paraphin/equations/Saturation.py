@@ -4,8 +4,7 @@ from paraphin.utils import up_kw, mid
 from paraphin.constants import Nx, Ny, hx, hy, dt, qw, volume, area
 
 
-def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (field(dtype=f32, shape=(Nx, Ny)),
-                                                          field(dtype=f32, shape=(Nx, Ny))):
+def calc_saturation(S, p, k, m, m_0, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
     """
     Вычисление водонасыщенности по явной схеме.
     """
@@ -15,7 +14,6 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (field(dtype=f32, shape
         for i in ndrange((1, Nx - 1)):
             for j in ndrange((1, Ny - 1)):
                 temp_val = 0.0
-                S_0[i, j] = S[i, j]
                 arr = [[i+1, j, hx], [i-1, j, hx], [i, j+1, hy], [i, j-1, hy]]
 
                 for idx in static(ndrange(4)):
@@ -28,6 +26,7 @@ def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (field(dtype=f32, shape
                 S[i, j] += -S[i, j] * (m[i, j] - m_0[i, j]) / m[i, j] - temp_val / m[i, j] / volume
 
     calc_saturation_loop()
+    # TODO учет скважины такой?
     S[0, 0] += dt * qw / m[0, 0]
 
-    return S, S_0
+    return S

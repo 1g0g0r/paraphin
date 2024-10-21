@@ -42,9 +42,9 @@ def up_ko(k1: types.f32, s1: types.f32, p1: types.f32, mu_o1: types.f32, mu_w1: 
 
 @func
 def K_o(k: types.f32, s: types.f32, mu_o: types.f32) -> f32:
-    return k * pf_o(s, mu_o) / mu_o
+    return k * pf_o(s) / mu_o
 
 
 @func
 def K_w(k: types.f32, s: types.f32, mu_w: types.f32) -> f32:
-    return k * pf_w(s, mu_w) / mu_w
+    return k * pf_w(s) / mu_w

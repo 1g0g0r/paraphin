@@ -44,39 +44,33 @@ class Solver:
         self.r = field(dtype=f32, shape=Nr)
         self.fi = field(dtype=f32, shape=(nx, ny, Nr))
         self.h_sloy = field(dtype=f32, shape=(nx, ny, Nr))
-        self.qp = field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
+        self.qp = field(dtype=f32, shape=(nx, ny))  # скорость отложения парафина в общем объеме
 
         # Массив результатов
         self.pres_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
         self.sat_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
         self.temp_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
 
+
     def initialize(self):
         @kernel
         def calc_integrals(rr: types.ndarray(), fi_o: types.ndarray()):
+            """Вычисление интегралов от функций r^4*fi_o(r) и r^2*fi_o(r)"""
             self.integr_r2_fi0[None] = 0.0
             self.integr_r4_fi0[None] = 0.0
+            self.r.from_numpy(rr)
 
-            self.r[0] = rr[0]
-            r3_old = rr[0] ** 3
-            r4_old = rr[0] * r3_old
-            r5_old = rr[0] * r4_old
-            r6_old = rr[0] * r5_old
+            r3 = rr ** 3
+            r4 = r3 * rr
+            r5 = r4 * rr
+            r6 = r5 * rr
             for i in ndrange((1, rr.shape[0])):
-                self.r[i] = rr[i]
                 dr = rr[i] - rr[i - 1]
-                r3_new = rr[i] ** 3
-                r4_new = rr[i] * r3_new
-                r5_new = rr[i] * r4_new
-                r6_new = rr[i] * r5_new
                 a = (fi_o[i - 1] * rr[i] - fi_o[i] * rr[i - 1]) / dr
                 b = (fi_o[i] - fi_o[i - 1]) / dr
-                self.integr_r2_fi0[None] += (r3_new - r3_old) * a / 3 + (r4_new - r4_old) * b / 4  # r^2 * fi
-                self.integr_r4_fi0[None] += (r5_new - r5_old) * a / 5 + (r6_new - r6_old) * b / 6  # r^4 * fi
-                r3_old = r3_new
-                r4_old = r4_new
-                r5_old = r5_new
-                r6_old = r6_new
+                self.integr_r2_fi0[None] += (r3[i] - r3[i-1]) * a / 3 + (r4[i] - r4[i-1]) * b / 4  # r^2 * fi
+                self.integr_r4_fi0[None] += (r5[i] - r5[i-1]) * a / 5 + (r6[i] - r6[i-1]) * b / 6  # r^4 * fi
+
 
         @kernel
         def initialize_params_loop(fi_o: types.ndarray()):
@@ -112,6 +106,7 @@ class Solver:
         calc_integrals(rr=r, fi_o=fi_0)
         initialize_params_loop(fi_o=fi_0)
 
+
     @kernel
     def _update_mu_and_c_temp(self):
         for i, j in ndrange(self.nx, self.ny):
@@ -122,63 +117,76 @@ class Solver:
             self.C_f[i, j] = calc_c_f(self.T[i, j])
             self.C_p[i, j] = calc_c_p(self.T[i, j])
 
+
     def _update_p(self) -> None:
+        """Обновление давления."""
         self.p = calc_pressure(self.p, self.Wo, self.Wo_0, self.m, self.m_0,
                                self.k, self.S, self.mu_o, self.mu_w)
 
-    def _update_s(self) -> None:
-        # TODO убрать self.p
-        self.S, self.S_0 = calc_saturation(self.S, self.S_0, self.p, self.k, self.m,
-                                           self.m_0, self.mu_o, self.mu_w)
 
-    def _update_wps_wp(self) -> None:
-        # TODO убрать self.Wps, self.Wp
-        self.Wps, self.Wp = calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
-                                        self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
+    def _update_s(self) -> field(dtype=f32, shape=(Nx, Ny)):
+        """Обновление насыщенности."""
+        return calc_saturation(self.S, self.p, self.k, self.m, self.m_0, self.mu_o, self.mu_w)
 
-    def _update_t(self) -> None:
-        # TODO убрать self.T
-        self.T = calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
-                                  self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
-    def _update_qp_m_k(self):
-        # TODO убрать self.qp, self.m, self.k
-        self.qp, self.m, self.k = calc_qp(self.p, self.Wps, self.m, self.fi, self.r,
-                                          self.integr_r2_fi0, self.integr_r4_fi0)
+    def _update_wps_wp(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny))):
+        """Обновлнние концентрации взвешенного и растворенного парафина."""
+        new_Wps, new_Wp = calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
+                                      self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
+        return new_Wps, new_Wp
+
+
+    def _update_t(self) -> field(dtype=f32, shape=(Nx, Ny)):
+        """Обновление температуры."""
+        return calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
+                                self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
+
+
+    def _update_qp_m_k(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny)),
+                                 field(dtype=f32, shape=(Nx, Ny))):
+        """Обновление объема выделяемого парафина, пористости и проницаемости."""
+        new_qp, m_mult, k_mult = calc_qp(self.p, self.Wps, self.mu_o, self.m, self.qp, self.fi, self.h_sloy,
+                                       self.r, self.integr_r2_fi0, self.integr_r4_fi0)
+        return new_qp, m_mult, k_mult
+
 
     def upd_time_step(self) -> None:
-        """Метод IMPES: явный по насыщенности и неявный по давления"""
-        self._update_p()  # Обновление давления
-        self._update_s()  # Обновление насыщенности
-        self._update_wps_wp()  # Обновлнние концентрации взвешенного парафина
-        self._update_t()    # Обновление температуры
-        self._update_qp_m_k()  # Обновление объема выделяемого парафина, пористости, проницаемости
+        """Метод IMPES: явный по насыщенности неявный по давлению"""
+        self._update_p()
 
-        # TODO проверить (мб добавить условие на размер сетки)
-        """
-        self._update_p()  # Обновление давления
         with ProcessPoolExecutor() as executor:
             # Запускаем задачи параллельно
-            sat = executor.submit(self._update_s())  # Обновление насыщенности
-            wps_wp = executor.submit(self._update_wps_wp())  # Обновлнние концентрации взвешенного парафина
-            temp = executor.submit(self._update_t())    # Обновление температуры
+            sat    = executor.submit(self._update_s())       # Обновление насыщенности
+            wps_wp = executor.submit(self._update_wps_wp())  # Обновление концентрации взвешенного парафина
+            temp   = executor.submit(self._update_t())       # Обновление температуры
             qp_m_k = executor.submit(self._update_qp_m_k())  # Обновление объема выделяемого парафина, пористости, проницаемости
     
             # Получаем результаты вычислений
             new_s = sat.result()
-            new_wps_wp = wps_wp.result()
+            new_wps, new_wp = wps_wp.result()
             new_t = temp.result()
-            new_qp_m_k = qp_m_k.result()
-            
-        # Обновление полей данных (переписать через метод класса)
-        for ...
-        S, S_0 = new_s, S
-        ...
-        """
+            new_qp, m_mult, k_mult = qp_m_k.result()
 
         # self._update_mu_and_c_temp()  # Обновление свойств веществ ввиду изменения температуры
+        self.swap_time_steps(new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult)
+
+
+    def swap_time_steps(self, new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult):
+        """Обновление полей данных на новом временном слое."""
+        self.S_0, self.S = self.S, new_s
+        self.Wo_0 = self.Wo
+        self.Wo.from_numpy(1.0 - self.Wp.to_array() - self.Wps.to_array())
+        self.Wp_0, self.Wp = self.Wp, new_wp
+        self.Wps = new_wps
+        self.k.from_numpy(self.k.to_array() * k_mult)
+        self.m_0 = self.m
+        self.m.from_numpy(self.m.to_array() * m_mult)
+        self.T = new_t
+        self.qp = new_qp
+
 
     def save_results(self, idx) -> None:
+        """Сохранение полей данных в файл формата pkl."""
         self.pres_arr[idx] = self.p.to_numpy()
         self.sat_arr[idx] = self.S.to_numpy()
         self.temp_arr[idx] = self.T.to_numpy()
