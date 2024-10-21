@@ -1,6 +1,6 @@
 from taichi import func
 
-from paraphin.utils.constants import S_min, S_max
+from paraphin.constants import S_min, S_max
 
 
 @func

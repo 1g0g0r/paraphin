@@ -1,7 +1,7 @@
 from taichi import f32, field, ndrange, kernel, static, exp
 
-from paraphin.utils.constants import Nx, Ny, hx, hy, dt, ro_p, ro_o, volume, area, Tm
-from paraphin.utils.utils import up_ko, mid
+from paraphin.utils import up_ko, mid
+from paraphin.constants import Nx, Ny, hx, hy, dt, ro_p, ro_o, volume, area, Tm
 
 
 def calc_wps_wp(qp, m, m_0, S, S_0, Wp, Wp_0, Wps, p, k, mu_o, mu_w, T) -> (field(dtype=f32, shape=(Nx, Ny)),

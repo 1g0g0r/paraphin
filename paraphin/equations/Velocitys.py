@@ -1,6 +1,7 @@
 from taichi import func
 
-from paraphin.utils.constants import (D, gamma, betta, Diff, Lk)
+from paraphin.constants import D, gamma, betta, Diff, Lk, Cf
+
 
 # Lk: float
 #     средняя длина капилляра, [м]
@@ -12,6 +13,8 @@ from paraphin.utils.constants import (D, gamma, betta, Diff, Lk)
 #     Коэффициент диффузионного осаждения частиц, [м2/сек]
 # D: float
 #     Размер частицы(диаметр частицы), [м]
+# Cf: float
+#     Коэф-т сопротивления частицы в нефти
 
 
 @func
@@ -23,16 +26,16 @@ def u_r(wps: float, Um: float, r: float, h: float) -> float:
     wps: float
         Объемная концентрация взвешенных частиц парафина, [м3/м3]
     Um: float
-        Среднее значение скорости жидкости в канале, [м/сут]
+        Среднее значение скорости жидкости в канале, [м/c]
     r: float
         Радиус капилляра, [м]
     h: float
-        толщина осадочного слоя, [м]
+        Толщина осадочного слоя, [м]
 
     Returns
     -------
     Ur: float
-        Скорость изменения радиуса капилляра, [м/сут]
+        Скорость изменения радиуса капилляра, [м/с]
     """
     if 2.0 * r * gamma < D:
         Ur = 0.0
@@ -54,7 +57,7 @@ def u_b(Um: float, wps: float, fi: float, r: float) -> float:
     Parameters
     ----------
     Um: float
-        Средняя скорость жидкости в капилляре, [м/сут]
+        Средняя скорость жидкости в капилляре, [м/с]
     wps: float
         Концентрация частиц в потоке, [м3/м3]
     fi: float
@@ -65,7 +68,7 @@ def u_b(Um: float, wps: float, fi: float, r: float) -> float:
     Returns
     -------
     Ub: float
-        Скорость блокирования капилляров, [м/сут]
+        Скорость блокирования капилляров, [м/с]
     """
     if 2.0 * r * gamma <= D:
         return 6.0 * betta * wps * r * r * fi * Um / D**3
@@ -74,27 +77,28 @@ def u_b(Um: float, wps: float, fi: float, r: float) -> float:
 
 
 @func
-def u_c(wps: float, fi: float, Um: float) -> float:
+def u_c(r: float, mu: float, ro: float) -> float:
     """Критическая скорость
 
     Parameters
     ----------
-    wps: float
-        Концентрация частиц в потоке, [м3/м3]
-    fi: float
-        Значение функции распределения пор по размерам
-    Um: float
-        Средняя скорость жидкости в капилляре, [м/сут]
-    nu: float
-        Объем частицы
-    TODO узнать, как вычисляется объем частицы
+    r: float
+        Радиус капилляра, [м]
+    mu: float
+        Вязкость нефти, [Па/с]
+    ro: float
+        Плотность парафина, [Кг/м^3]
 
     Return
     ------
     uc: float
-        Критическая скорость
+        Критическая скорость, [м/с]
     """
-    if r <= r_max:
-        return - beta * wps * fi * Um / nu
+
+    x0 = 0.5 * D / r
+    if x0 <= 1.0:
+        x = 1.0 - x0
+        uc = Cf * D * D * ro * 0.545 / (mu * (1.0 - x * x))
+        return uc
     else:
         return 0.0

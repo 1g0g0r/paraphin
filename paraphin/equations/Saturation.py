@@ -1,7 +1,7 @@
 from taichi import f32, field, ndrange, kernel, static
 
-from paraphin.utils.constants import Nx, Ny, hx, hy, dt, qw, volume, area
-from paraphin.utils.utils import up_kw, mid
+from paraphin.utils import up_kw, mid
+from paraphin.constants import Nx, Ny, hx, hy, dt, qw, volume, area
 
 
 def calc_saturation(S, S_0, p, k, m, m_0, mu_o, mu_w) -> (field(dtype=f32, shape=(Nx, Ny)),

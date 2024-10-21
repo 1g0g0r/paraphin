@@ -2,16 +2,18 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from taichi import f32, i32, field, ndrange, kernel, static
 
-from paraphin.utils.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
-from paraphin.utils.utils import mid
+from paraphin.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
+from paraphin.utils import mid
 
 
-def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_pressure(p, Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКО)
 
     Parameters
     ----------
+    p: taichi.field
+        Давление, [Па]
     Wo: taichi.field
         Объемная доля масляного компонента в нефти, [-]
     Wo_0: taichi.field
@@ -34,7 +36,6 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
     p: taichi.field
         Давление, [Па]
     """
-    p = field(dtype=f32, shape=(Nx, Ny))
     N = Nx * Ny  # размер матрицы
     NN = (Nx - 2) * (Ny - 2) * 5 + (Nx-2) * 8 + (Ny-2) * 8 + 12  # количество ненулевых элементов
     data = field(f32, shape=NN)
@@ -49,34 +50,33 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
             for j in ndrange(Ny):
                 idx = i + j * Nx
                 p_sum = 0.0
-                mult = 1.0
                 # matrix
                 arr = [[i + 1, j, hx], [i - 1, j, hx], [i, j + 1, hy], [i, j - 1, hy]]
                 for qq in static(ndrange(4)):
                     i1, j1, hij = arr[qq]
                     if (0 <= i1 < Nx) and (0 <= j1 < Ny):
-                        p = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
-                                             k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
+                        temp = Wo[i1, j1] * mid(k[i, j], S[i, j], mu_o[i, j], mu_w[i, j],
+                                                k[i1, j1], S[i1, j1], mu_o[i1, j1], mu_w[i1, j1]) * area / hij
                         row_indices[num] = idx
                         col_indices[num] = idx + (i1-i) + Nx * (j1-j)
-                        data[num] = -p
-                        p_sum += p
+                        data[num] = -temp
+                        p_sum += temp
                         num += 1
-                    else:
-                        mult *= 1  # учет 0.5 и 0.25 объема элемента
 
                 row_indices[num] = idx
                 col_indices[num] = idx
-                data[num] = p_sum * mult
+                data[num] = p_sum
                 num += 1
 
                 # rhs
                 b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) + (1 - S[i, j]) *
-                          m[i, j] * (Wo[i, j] - Wo_0[i, j])) * volume * mult / dt
+                          m[i, j] * (Wo[i, j] - Wo_0[i, j])) * volume / dt
 
             # Добавили скважины в точки (0,0) (nx, ny)
-        b[0] += Wo[0, 0] * qw * volume # * 0.25
-        b[N-1] += qo * volume # * 0.25
+        # b[0] += Wo[0, 0] * qw * volume
+        # b[N-1] += qo * volume
+        b[0] += p[0, 0] + qw * mu_w[0, 0] / k[0, 0]
+        b[N-1] += p[Nx-1, Ny-1] + qo * mu_o[Nx, Ny] / k[Nx-1, Ny-1]
 
     fill_matrix_and_rhs()
     A_csr = csr_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))
@@ -87,7 +87,7 @@ def calc_pressure(Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=
     # ml = pyamg.ruge_stuben_solver(A_csr)  # construct the multigrid hierarchy
     # xx = ml.solve(b.to_numpy(), tol=1e-10)
 
-    # show_plot(x, 'plotly')
+    show_plot(x, 'plotly')
     p.from_numpy(x.reshape((Nx, Ny)))
     return p
 
@@ -108,7 +108,7 @@ def show_plot(x, type):
     elif type == 'plotly':
         from numpy import linspace
         import plotly.graph_objects as go
-        from paraphin.utils.constants import X_min, X_max, Y_max, Y_min
+        from paraphin.constants import X_min, X_max, Y_max, Y_min
 
         x = linspace(X_min, X_max, Nx)
         y = linspace(Y_min, Y_max, Ny)

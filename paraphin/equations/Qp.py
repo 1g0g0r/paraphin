@@ -1,15 +1,14 @@
-from taichi import f32, field, ndrange, func, kernel, static
 from numpy import zeros, float32, gradient
 from numpy.linalg import norm
+from taichi import f32, field, ndrange, func, kernel
 
+from paraphin.constants import (Nx, Ny, Nr, dt, ro_o, eta)
 from .Velocitys import u_c, u_b, u_r
-from paraphin.utils.constants import (Nx, Ny, Nr, hx, hy, dt, ro_p, ro_o, volume, area)
-from paraphin.utils.utils import up_ko, mid
 
 
-def calc_qp(p, Wps, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
-                                                                field(dtype=f32, shape=(Nx, Ny)),
-                                                                field(dtype=f32, shape=(Nx, Ny))):
+def calc_qp(p, Wps, mu_o, m, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
+                                                                        field(dtype=f32, shape=(Nx, Ny)),
+                                                                        field(dtype=f32, shape=(Nx, Ny))):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
 
@@ -23,6 +22,8 @@ def calc_qp(p, Wps, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32,
         Пористость
     fi: taichi.field(Nx, Ny, Nr)
         Функция распределения пор по размеру
+    h_sloy: taichi.field(Nx, Ny, Nr)
+        Толщина осадочного слоя
     r: taichi.field(Nr)
         Радиусы пор
     integr_r2_fi0: float
@@ -37,11 +38,12 @@ def calc_qp(p, Wps, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32,
     fi: taichi.field(Nx, Ny, Nr)
         Обновленная функция распределения пор по размеру
     """
-    u_r = zeros(Nr, dtype=float32)
-    u_b = zeros(Nr, dtype=float32)
-    u_c = zeros(Nr, dtype=float32)
+    ur = zeros(Nr, dtype=float32)
+    ub = zeros(Nr, dtype=float32)
+    uc = zeros(Nr, dtype=float32)
 
-    dp = norm(gradient(p.to_numpy()), axis=0)
+
+    Um_r2 = norm(gradient(p.to_numpy()), axis=0) * 0.125 / eta / mu_o.to_numpy()
 
     @kernel
     def calc_qp_loop():
@@ -51,9 +53,12 @@ def calc_qp(p, Wps, m, fi, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32,
 
                 # Расчет скоростей Ur, Ub, Uc
                 for ij in ndrange(Nr):
-                    u_r[ij] = u_r(Wps[i,j], Um[i,j], r[ij])
-                    u_b[ij] = u_b(Um[i,j], Wps[i,j], fi[i,j,ij], r[ij])
-                    u_c[ij] = u_c(Wps[i,j], fi[i,j,ij], Um[i,j])
+                    u_m = Um_r2[i, j] * r[ij] * r[ij]
+                    # TODO спросить про осадочный слой
+                    ur[ij] = u_r(Wps[i,j], Um[i,j], r[ij], h_sloy)
+                    ub[ij] = u_b(Um[i,j], Wps[i,j], fi[i,j,ij], r[ij])
+                    uc[ij] = u_c(r[ij], mu_o[i,j], ro_o[i, j])
+                    h_sloy[i, j, ij] = sed_h(h_sloy[i, j, ij], ur, r)
 
                 # Расчет интегралов qp1, qp2, kf, mf
                 qp1 = 0.0
@@ -107,3 +112,9 @@ def upd_fi(fi: float, Ur: float, fi1: float, Ur1: float, dr: float, Ub: float) -
 
     fi -= dt * ((fi * Ur - fi1 * Ur1) / dr + Ub)
     return fi
+
+
+def sed_h(h0, ur, r):
+    hr = h0 - dt * ur
+    hr = max(0.0, min(hr, r - 1e-7))
+    return hr

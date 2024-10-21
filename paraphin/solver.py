@@ -1,13 +1,12 @@
 from pickle import dump
 
 from numpy import empty, ceil, isclose
-from concurrent.futures import ProcessPoolExecutor
 from taichi import f32, field, ndrange, data_oriented, kernel, types
 
 from paraphin.equations import (calc_qp, calc_pressure, calc_saturation, calc_temperature, calc_wps_wp)
-from paraphin.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
-from paraphin.utils.constants import (Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
-                                      init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p, init_qp)
+from paraphin.utils.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
+from paraphin.constants import (Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
+                                      init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p, init_qp, init_h_sloy)
 
 
 @data_oriented
@@ -43,7 +42,8 @@ class Solver:
         self.integr_r2_fi0 = field(dtype=f32, shape=())
         self.integr_r4_fi0 = field(dtype=f32, shape=())
         self.r = field(dtype=f32, shape=Nr)
-        self.fi = field(dtype=f32, shape=(nx, ny, fi_0.shape[0]))
+        self.fi = field(dtype=f32, shape=(nx, ny, Nr))
+        self.h_sloy = field(dtype=f32, shape=(nx, ny, Nr))
         self.qp = field(dtype=f32, shape=(nx, ny))  # скорость отложения парафиновых отложений в общем объеме пористой породы
 
         # Массив результатов
@@ -80,32 +80,34 @@ class Solver:
 
         @kernel
         def initialize_params_loop(fi_o: types.ndarray()):
-            for i, j in ndrange(self.nx, self.ny):
-                # параметры пласта
-                self.p[i, j] = init_p
-                self.S[i, j] = init_S
-                self.S_0[i, j] = init_S
-                self.Wo[i, j] = init_Wo
-                self.Wo_0[i, j] = init_Wo
-                self.Wp[i, j] = init_Wp
-                self.Wp_0[i, j] = init_Wp
-                self.Wps[i, j] = init_Wps
-                self.k[i, j] = init_k
-                self.m[i, j] = init_m
-                self.m_0[i, j] = init_m
-                self.T[i, j] = init_T
-                self.qp[i, j] = init_qp
+            for i in ndrange(self.nx):
+                for j in ndrange(self.ny):
+                    # параметры пласта
+                    self.p[i, j] = init_p
+                    self.S[i, j] = init_S
+                    self.S_0[i, j] = init_S
+                    self.Wo[i, j] = init_Wo
+                    self.Wo_0[i, j] = init_Wo
+                    self.Wp[i, j] = init_Wp
+                    self.Wp_0[i, j] = init_Wp
+                    self.Wps[i, j] = init_Wps
+                    self.k[i, j] = init_k
+                    self.m[i, j] = init_m
+                    self.m_0[i, j] = init_m
+                    self.T[i, j] = init_T
+                    self.qp[i, j] = init_qp
 
-                # свойства флюидов
-                self.mu_o[i, j] = calc_mu_o(init_T)
-                self.mu_w[i, j] = calc_mu_w(init_T)
-                self.C_w[i, j] = calc_c_w(init_T)
-                self.C_o[i, j] = calc_c_o(init_T)
-                self.C_f[i, j] = calc_c_f(init_T)
-                self.C_p[i, j] = calc_c_p(init_T)
+                    # свойства флюидов
+                    self.mu_o[i, j] = calc_mu_o(init_T)
+                    self.mu_w[i, j] = calc_mu_w(init_T)
+                    self.C_w[i, j] = calc_c_w(init_T)
+                    self.C_o[i, j] = calc_c_o(init_T)
+                    self.C_f[i, j] = calc_c_f(init_T)
+                    self.C_p[i, j] = calc_c_p(init_T)
 
-                for ij in ndrange(fi_o.shape[0]):
-                    self.fi[i, j, ij] = fi_o[ij]
+                    for ij in ndrange(fi_o.shape[0]):
+                        self.fi[i, j, ij] = fi_o[ij]
+                        self.h_sloy[i, j, ij] = init_h_sloy
 
         calc_integrals(rr=r, fi_o=fi_0)
         initialize_params_loop(fi_o=fi_0)
@@ -121,7 +123,7 @@ class Solver:
             self.C_p[i, j] = calc_c_p(self.T[i, j])
 
     def _update_p(self) -> None:
-        self.p = calc_pressure(self.Wo, self.Wo_0, self.m, self.m_0,
+        self.p = calc_pressure(self.p, self.Wo, self.Wo_0, self.m, self.m_0,
                                self.k, self.S, self.mu_o, self.mu_w)
 
     def _update_s(self) -> None:
@@ -168,7 +170,7 @@ class Solver:
             new_t = temp.result()
             new_qp_m_k = qp_m_k.result()
             
-        # Обновление полей данных 
+        # Обновление полей данных (переписать через метод класса)
         for ...
         S, S_0 = new_s, S
         ...
