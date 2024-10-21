@@ -168,10 +168,10 @@ class Solver:
             new_qp, m_mult, k_mult = qp_m_k.result()
 
         # self._update_mu_and_c_temp()  # Обновление свойств веществ ввиду изменения температуры
-        self.swap_time_steps(new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult)
+        self._swap_time_steps(new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult)
 
 
-    def swap_time_steps(self, new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult):
+    def _swap_time_steps(self, new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult):
         """Обновление полей данных на новом временном слое."""
         self.S_0, self.S = self.S, new_s
         self.Wo_0 = self.Wo
