@@ -98,7 +98,7 @@ def u_c(r: float, mu: float, ro: float) -> float:
     x0 = 0.5 * D / r
     if x0 <= 1.0:
         x = 1.0 - x0
-        uc = Cf * D * D * ro * 0.545 / (mu * (1.0 - x * x))
+        uc = Cf * D * D * ro * 0.545 / (mu * (1.0 - x * x))  # 0.545 = 9.81 / 18.
         return uc
     else:
         return 0.0

@@ -42,10 +42,10 @@ def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) ->
     fi: taichi.field(Nx, Ny, Nr)
         Обновленная функция распределения пор по размеру
     """
-    k_mult = field(dtype=f32, shape=(nx, ny))
-    m_mult = field(dtype=f32, shape=(nx, ny))
+    k_mult = field(dtype=f32, shape=(Nx, Ny))
+    m_mult = field(dtype=f32, shape=(Nx, Ny))
 
-    r2 = rr ** 2
+    r2 = rr * rr
     r3 = r2 * rr
     r4 = r3 * rr
     r5 = r4 * rr
@@ -55,7 +55,6 @@ def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) ->
 
     @kernel
     def calc_qp_loop():
-
         for i in ndrange(Nx):
             for j in ndrange(Ny):
                 qp1 = 0.0
@@ -99,15 +98,15 @@ def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) ->
                     ub = ub_new
 
                     # TODO уточнить когда обновляется
-                    # fi[i, j, ij] = upd_fi(fi[i, j, ij], ur_new, fi[i, j, ij - 1], ur, r[ij] - r[ij - 1], ub)
+                    fi[i, j, ij] = upd_fi(fi[i, j, ij], ur_new, fi[i, j, ij - 1], ur, r[ij] - r[ij - 1], ub)
 
-                qp[i, j] = m[i, j] * (2.0 * qp1 + Wps[i, j] * qp2)
-                m_mult[i, j] = kf / integr_r2_fi0
-                k_mult[i, j] = mf / integr_r4_fi0
+                qp[i, j] = m[i, j] * (2.0 * qp1 + Wps[i, j] * qp2) / r2fi
+                m_mult[i, j] = r2fi / integr_r2_fi0
+                k_mult[i, j] = r4fi / integr_r4_fi0
 
     calc_qp_loop()
 
-    return qp
+    return qp, m_mult, k_mult
 
 
 @func

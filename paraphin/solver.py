@@ -53,24 +53,21 @@ class Solver:
 
 
     def initialize(self):
-        @kernel
         def calc_integrals(rr: types.ndarray(), fi_o: types.ndarray()):
             """Вычисление интегралов от функций r^4*fi_o(r) и r^2*fi_o(r)"""
             self.integr_r2_fi0[None] = 0.0
             self.integr_r4_fi0[None] = 0.0
-            self.r.from_numpy(rr)
+            r3 = r ** 3
+            r4 = r3 * r
+            r5 = r4 * r
+            r6 = r5 * r
 
-            r3 = rr ** 3
-            r4 = r3 * rr
-            r5 = r4 * rr
-            r6 = r5 * rr
-            for i in ndrange((1, rr.shape[0])):
+            for i in range(1, Nr):
                 dr = rr[i] - rr[i - 1]
                 a = (fi_o[i - 1] * rr[i] - fi_o[i] * rr[i - 1]) / dr
                 b = (fi_o[i] - fi_o[i - 1]) / dr
                 self.integr_r2_fi0[None] += (r3[i] - r3[i-1]) * a / 3 + (r4[i] - r4[i-1]) * b / 4  # r^2 * fi
                 self.integr_r4_fi0[None] += (r5[i] - r5[i-1]) * a / 5 + (r6[i] - r6[i-1]) * b / 6  # r^4 * fi
-
 
         @kernel
         def initialize_params_loop(fi_o: types.ndarray()):
@@ -103,6 +100,7 @@ class Solver:
                         self.fi[i, j, ij] = fi_o[ij]
                         self.h_sloy[i, j, ij] = init_h_sloy
 
+        self.r.from_numpy(r)
         calc_integrals(rr=r, fi_o=fi_0)
         initialize_params_loop(fi_o=fi_0)
 
@@ -131,9 +129,8 @@ class Solver:
 
     def _update_wps_wp(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny))):
         """Обновлнние концентрации взвешенного и растворенного парафина."""
-        new_Wps, new_Wp = calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
-                                      self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
-        return new_Wps, new_Wp
+        return calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
+                           self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
 
 
     def _update_t(self) -> field(dtype=f32, shape=(Nx, Ny)):
@@ -145,27 +142,30 @@ class Solver:
     def _update_qp_m_k(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny)),
                                  field(dtype=f32, shape=(Nx, Ny))):
         """Обновление объема выделяемого парафина, пористости и проницаемости."""
-        new_qp, m_mult, k_mult = calc_qp(self.p, self.Wps, self.mu_o, self.m, self.qp, self.fi, self.h_sloy,
-                                       self.r, self.integr_r2_fi0, self.integr_r4_fi0)
-        return new_qp, m_mult, k_mult
+        return calc_qp(self.p, self.Wps, self.mu_o, self.m, self.qp, self.fi, self.h_sloy,
+                       self.r, self.integr_r2_fi0, self.integr_r4_fi0)
 
 
     def upd_time_step(self) -> None:
         """Метод IMPES: явный по насыщенности неявный по давлению"""
         self._update_p()
+        new_s = self._update_s()                        # Обновление насыщенности
+        new_wps, new_wp = self._update_wps_wp()         # Обновление концентрации взвешенного парафина
+        new_t = self._update_t()                        # Обновление температуры
+        new_qp, m_mult, k_mult = self._update_qp_m_k()  # Обновление объема выделяемого парафина, пористости, проницаемости
 
-        with ProcessPoolExecutor() as executor:
-            # Запускаем задачи параллельно
-            sat    = executor.submit(self._update_s)       # Обновление насыщенности
-            wps_wp = executor.submit(self._update_wps_wp)  # Обновление концентрации взвешенного парафина
-            temp   = executor.submit(self._update_t)       # Обновление температуры
-            qp_m_k = executor.submit(self._update_qp_m_k)  # Обновление объема выделяемого парафина, пористости, проницаемости
-    
-            # Получаем результаты вычислений
-            new_s = sat.result()
-            new_wps, new_wp = wps_wp.result()
-            new_t = temp.result()
-            new_qp, m_mult, k_mult = qp_m_k.result()
+        # with ProcessPoolExecutor() as executor:
+        #     # Запускаем задачи параллельно
+        #     sat    = executor.submit(self._update_s)       # Обновление насыщенности
+        #     wps_wp = executor.submit(self._update_wps_wp)  # Обновление концентрации взвешенного парафина
+        #     temp   = executor.submit(self._update_t)       # Обновление температуры
+        #     qp_m_k = executor.submit(self._update_qp_m_k)  # Обновление объема выделяемого парафина, пористости, проницаемости
+        #
+        #     # Получаем результаты вычислений
+        #     new_s = sat.result()
+        #     new_wps, new_wp = wps_wp.result()
+        #     new_t = temp.result()
+        #     new_qp, m_mult, k_mult = qp_m_k.result()
 
         # self._update_mu_and_c_temp()  # Обновление свойств веществ ввиду изменения температуры
         self._swap_time_steps(new_s, new_wps, new_wp, new_t, new_qp, m_mult, k_mult)
