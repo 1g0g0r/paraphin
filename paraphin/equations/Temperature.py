@@ -1,11 +1,11 @@
-from taichi import f32, field, ndrange, kernel, static
+from taichi import field, ndrange, kernel, static
 
 from paraphin.utils import up_kw, up_ko, mid
-from paraphin.constants import (Nx, Ny, hx, hy, dt, volume, area, ro_w, ro_f,
-                                      ro_o, ro_p, K_o, K_f, K_w, K_p)
+from paraphin.constants import (default_type, Nx, Ny, hx, hy, dt, volume, area, ro_w, ro_f,
+                                ro_o, ro_p, K_o, K_f, K_w, K_p)
 
 
-def calc_temperature(T, m, S, C_o, C_w, C_f, C_p, Wp, Wps, p, k, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_temperature(T, m, S, C_o, C_w, C_f, C_p, Wp, Wps, p, k, mu_o, mu_w) -> field(dtype=default_type, shape=(Nx, Ny)):
     """
     Вычисление температуры по явной схеме
     """

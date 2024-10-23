@@ -1,16 +1,14 @@
-from math import gamma
-
-from numpy import zeros, float32, gradient
+from numpy import gradient
 from numpy.linalg import norm
-from taichi import f32, field, ndrange, func, kernel
+from taichi import field, ndrange, func, kernel
 
-from paraphin.constants import Nx, Ny, Nr, dt, ro_o, eta, D, gamma
+from paraphin.constants import default_type, Nx, Ny, Nr, dt, ro_o, eta, D, gamma
 from .Velocitys import u_c, u_b, u_r
 
 
-def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=f32, shape=(Nx, Ny)),
-                                                                        field(dtype=f32, shape=(Nx, Ny)),
-                                                                        field(dtype=f32, shape=(Nx, Ny))):
+def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) -> (field(dtype=default_type, shape=(Nx, Ny)),
+                                                                                  field(dtype=default_type, shape=(Nx, Ny)),
+                                                                                  field(dtype=default_type, shape=(Nx, Ny))):
     """
     Вычисление концентрации взвешенных частиц парафина по явной схеме
 
@@ -42,14 +40,14 @@ def calc_qp(p, Wps, mu_o, m, qp, fi, h_sloy, r, integr_r2_fi0, integr_r4_fi0) ->
     fi: taichi.field(Nx, Ny, Nr)
         Обновленная функция распределения пор по размеру
     """
-    k_mult = field(dtype=f32, shape=(Nx, Ny))
-    m_mult = field(dtype=f32, shape=(Nx, Ny))
+    k_mult = field(dtype=default_type, shape=(Nx, Ny))
+    m_mult = field(dtype=default_type, shape=(Nx, Ny))
 
-    r2 = rr * rr
-    r3 = r2 * rr
-    r4 = r3 * rr
-    r5 = r4 * rr
-    r6 = r5 * rr
+    r2 = r * r
+    r3 = r2 * r
+    r4 = r3 * r
+    r5 = r4 * r
+    r6 = r5 * r
 
     Um_r2 = norm(gradient(p.to_numpy()), axis=0) * 0.125 / eta / mu_o.to_numpy()
 

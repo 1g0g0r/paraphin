@@ -1,12 +1,12 @@
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
-from taichi import f32, i32, field, ndrange, kernel, static
+from taichi import i32, field, ndrange, kernel, static
 
-from paraphin.constants import Nx, Ny, area, hx, hy, dt, volume, qw, qo
+from paraphin.constants import default_type, Nx, Ny, area, hx, hy, dt, volume, qw, qo
 from paraphin.utils import mid
 
 
-def calc_pressure(p, Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_pressure(p, Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=default_type, shape=(Nx, Ny)):
     """
     Сборка матрицы и решение СЛАУ уравнения давления (МКО)
 
@@ -38,10 +38,10 @@ def calc_pressure(p, Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, sha
     """
     N = Nx * Ny  # размер матрицы
     NN = (Nx - 2) * (Ny - 2) * 5 + (Nx-2) * 8 + (Ny-2) * 8 + 12  # количество ненулевых элементов
-    data = field(f32, shape=NN)
+    data = field(default_type, shape=NN)
     row_indices = field(i32, shape=NN)
     col_indices = field(i32, shape=NN)
-    b = field(f32, shape=N)
+    b = field(default_type, shape=N)
 
     @kernel
     def fill_matrix_and_rhs():
@@ -72,11 +72,13 @@ def calc_pressure(p, Wo, Wo_0, m, m_0, k, S, mu_o, mu_w) -> field(dtype=f32, sha
                 b[idx] = (Wo[i, j] * (m[i, j] - m_0[i, j]) + (1 - S[i, j]) *
                           m[i, j] * (Wo[i, j] - Wo_0[i, j])) * volume / dt
 
-            # Добавили скважины в точки (0,0) (nx, ny)
+        # Добавили скважины в точки (0,0) (nx, ny)
         # b[0] += Wo[0, 0] * qw * volume
         # b[N-1] += qo * volume
         b[0] += p[0, 0] + qw * mu_w[0, 0] / k[0, 0]
-        b[N-1] += p[Nx-1, Ny-1] + qo * mu_o[Nx, Ny] / k[Nx-1, Ny-1]
+        # data[0]
+        b[N-1] += p[Nx-1, Ny-1] + qo * mu_o[Nx-1, Ny-1] / k[Nx-1, Ny-1]
+        # data[NN-1]
 
     fill_matrix_and_rhs()
     A_csr = csr_matrix((data.to_numpy(), (row_indices.to_numpy(), col_indices.to_numpy())), shape=(N, N))

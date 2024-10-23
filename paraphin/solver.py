@@ -1,50 +1,48 @@
 from pickle import dump
 
 from numpy import empty, ceil, isclose
-from taichi import f32, field, ndrange, data_oriented, kernel, types
+from taichi import f32, f64, field, ndrange, data_oriented, kernel, types
 
-from paraphin.equations import (calc_qp, calc_pressure, calc_saturation, calc_temperature, calc_wps_wp)
+from paraphin.equations import calc_qp, calc_pressure, calc_saturation, calc_temperature, calc_wps_wp
 from paraphin.utils.fluids_correlations import calc_mu_o, calc_mu_w, calc_c_f, calc_c_o, calc_c_w, calc_c_p
-from paraphin.constants import (Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
-                                      init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p, init_qp, init_h_sloy)
+from paraphin.constants import (default_type, Nx, Ny, Nr, Time_end, sol_time_step, output_file_name, init_T, r, fi_0,
+                                init_k, init_S, init_m, init_Wp, init_Wps, init_Wo, init_p, init_qp, init_h_sloy)
 
 
 @data_oriented
 class Solver:
-    def __init__(self, nx=Nx, ny=Ny):
-        # константы
-        self.nx = nx
-        self.ny = ny
+    def __init__(self, d_type = default_type):
+        self.d_type = d_type
 
         # свойства флюидов
-        self.mu_o = field(dtype=f32, shape=(nx, ny))  # вязкость нефти
-        self.mu_w = field(dtype=f32, shape=(nx, ny))  # вязкость воды
-        self.C_w = field(dtype=f32, shape=(nx, ny))  # теплоемкость воды
-        self.C_o = field(dtype=f32, shape=(nx, ny))  # теплоемкость нефти
-        self.C_f = field(dtype=f32, shape=(nx, ny))  # теплоемкость пласта
-        self.C_p = field(dtype=f32, shape=(nx, ny))  # теплоемкость парафина
+        self.mu_o = field(dtype=d_type, shape=(Nx, Ny))  # вязкость нефти
+        self.mu_w = field(dtype=d_type, shape=(Nx, Ny))  # вязкость воды
+        self.C_w = field(dtype=d_type, shape=(Nx, Ny))  # теплоемкость воды
+        self.C_o = field(dtype=d_type, shape=(Nx, Ny))  # теплоемкость нефти
+        self.C_f = field(dtype=d_type, shape=(Nx, Ny))  # теплоемкость пласта
+        self.C_p = field(dtype=d_type, shape=(Nx, Ny))  # теплоемкость парафина
 
         # поля данных
-        self.p = field(dtype=f32, shape=(nx, ny))  # давление
-        self.S = field(dtype=f32, shape=(nx, ny))  # Водонасыщенность
-        self.S_0 = field(dtype=f32, shape=(nx, ny))
-        self.Wo = field(dtype=f32, shape=(nx, ny))  # Массовая доля маслянного компонента в нефти
-        self.Wo_0 = field(dtype=f32, shape=(nx, ny))
-        self.Wp = field(dtype=f32, shape=(nx, ny))  # Массовая доля растворенного парафина в нефти
-        self.Wp_0 = field(dtype=f32, shape=(nx, ny))
-        self.Wps = field(dtype=f32, shape=(nx, ny))  # Массовая доля взвешенного парафина в нефти
-        self.k = field(dtype=f32, shape=(nx, ny))  # проницаемость [m^2]
-        self.m = field(dtype=f32, shape=(nx, ny))  # пористость
-        self.m_0 = field(dtype=f32, shape=(nx, ny))
-        self.T = field(dtype=f32, shape=(nx, ny))  # температура [C]
+        self.p = field(dtype=d_type, shape=(Nx, Ny))  # давление
+        self.S = field(dtype=d_type, shape=(Nx, Ny))  # Водонасыщенность
+        self.S_0 = field(dtype=d_type, shape=(Nx, Ny))
+        self.Wo = field(dtype=d_type, shape=(Nx, Ny))  # Массовая доля маслянного компонента в нефти
+        self.Wo_0 = field(dtype=d_type, shape=(Nx, Ny))
+        self.Wp = field(dtype=d_type, shape=(Nx, Ny))  # Массовая доля растворенного парафина в нефти
+        self.Wp_0 = field(dtype=d_type, shape=(Nx, Ny))
+        self.Wps = field(dtype=d_type, shape=(Nx, Ny))  # Массовая доля взвешенного парафина в нефти
+        self.k = field(dtype=d_type, shape=(Nx, Ny))  # проницаемость [m^2]
+        self.m = field(dtype=d_type, shape=(Nx, Ny))  # пористость
+        self.m_0 = field(dtype=d_type, shape=(Nx, Ny))
+        self.T = field(dtype=d_type, shape=(Nx, Ny))  # температура [C]
 
         # динамика образования парафина (кольматация\суффозия)
-        self.integr_r2_fi0 = field(dtype=f32, shape=())
-        self.integr_r4_fi0 = field(dtype=f32, shape=())
-        self.r = field(dtype=f32, shape=Nr)
-        self.fi = field(dtype=f32, shape=(nx, ny, Nr))
-        self.h_sloy = field(dtype=f32, shape=(nx, ny, Nr))
-        self.qp = field(dtype=f32, shape=(nx, ny))  # скорость отложения парафина в общем объеме
+        self.integr_r2_fi0 = field(dtype=d_type, shape=())
+        self.integr_r4_fi0 = field(dtype=d_type, shape=())
+        self.r = field(dtype=d_type, shape=Nr)
+        self.fi = field(dtype=d_type, shape=(Nx, Ny, Nr))
+        self.h_sloy = field(dtype=d_type, shape=(Nx, Ny, Nr))
+        self.qp = field(dtype=d_type, shape=(Nx, Ny))  # скорость отложения парафина в общем объеме
 
         # Массив результатов
         self.pres_arr = empty(ceil(Time_end / sol_time_step + 1).astype(int), dtype=object)
@@ -71,8 +69,8 @@ class Solver:
 
         @kernel
         def initialize_params_loop(fi_o: types.ndarray()):
-            for i in ndrange(self.nx):
-                for j in ndrange(self.ny):
+            for i in ndrange(Nx):
+                for j in ndrange(Ny):
                     # параметры пласта
                     self.p[i, j] = init_p
                     self.S[i, j] = init_S
@@ -107,7 +105,7 @@ class Solver:
 
     @kernel
     def _update_mu_and_c_temp(self):
-        for i, j in ndrange(self.nx, self.ny):
+        for i, j in ndrange(Nx, Ny):
             self.mu_o[i, j] = calc_mu_o(self.T[i, j])
             self.mu_w[i, j] = calc_mu_w(self.T[i, j])
             self.C_w[i, j] = calc_c_w(self.T[i, j])
@@ -122,25 +120,26 @@ class Solver:
                                self.k, self.S, self.mu_o, self.mu_w)
 
 
-    def _update_s(self) -> field(dtype=f32, shape=(Nx, Ny)):
+    def _update_s(self) -> field(dtype=default_type, shape=(Nx, Ny)):
         """Обновление насыщенности."""
         return calc_saturation(self.S, self.p, self.k, self.m, self.m_0, self.mu_o, self.mu_w)
 
 
-    def _update_wps_wp(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny))):
+    def _update_wps_wp(self) -> (field(dtype=default_type, shape=(Nx, Ny)),
+                                 field(dtype=default_type, shape=(Nx, Ny))):
         """Обновлнние концентрации взвешенного и растворенного парафина."""
         return calc_wps_wp(self.qp, self.m, self.m_0, self.S, self.S_0, self.Wp, self.Wp_0,
                            self.Wps, self.p, self.k, self.mu_o, self.mu_w, self.T)
 
 
-    def _update_t(self) -> field(dtype=f32, shape=(Nx, Ny)):
+    def _update_t(self) -> field(dtype=default_type, shape=(Nx, Ny)):
         """Обновление температуры."""
         return calc_temperature(self.T, self.m, self.S, self.C_o, self.C_w, self.C_f, self.C_p,
                                 self.Wp, self.Wps, self.p, self.k, self.mu_o, self.mu_w)
 
 
-    def _update_qp_m_k(self) -> (field(dtype=f32, shape=(Nx, Ny)), field(dtype=f32, shape=(Nx, Ny)),
-                                 field(dtype=f32, shape=(Nx, Ny))):
+    def _update_qp_m_k(self) -> (field(dtype=default_type, shape=(Nx, Ny)), field(dtype=default_type, shape=(Nx, Ny)),
+                                 field(dtype=default_type, shape=(Nx, Ny))):
         """Обновление объема выделяемого парафина, пористости и проницаемости."""
         return calc_qp(self.p, self.Wps, self.mu_o, self.m, self.qp, self.fi, self.h_sloy,
                        self.r, self.integr_r2_fi0, self.integr_r4_fi0)

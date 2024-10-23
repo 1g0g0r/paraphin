@@ -3,10 +3,11 @@
 from sys import stdout
 
 from numpy import linspace, isclose
-from taichi import init, cpu
+from taichi import init, cpu, f64
 from tqdm import tqdm
 
-init(arch=cpu)
+data_type = f64
+init(arch=cpu, default_fp=data_type)
 
 from paraphin.solver import Solver
 from paraphin.constants import Time_end, dt, sol_time_step
@@ -16,7 +17,7 @@ from paraphin.utils.vizualization import visualize_solution
 def solve():
     """Запуск расчета."""
     iter = 0
-    sol = Solver()
+    sol = Solver(data_type)
     sol.initialize()  # Задание начальных условий
 
     times = linspace(0, Time_end, int(Time_end / dt + 1))

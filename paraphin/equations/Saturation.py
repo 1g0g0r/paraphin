@@ -1,10 +1,10 @@
-from taichi import f32, field, ndrange, kernel, static
+from taichi import field, ndrange, kernel, static
 
 from paraphin.utils import up_kw, mid
-from paraphin.constants import Nx, Ny, hx, hy, dt, qw, volume, area
+from paraphin.constants import default_type, Nx, Ny, hx, hy, dt, qw, volume, area
 
 
-def calc_saturation(S, p, k, m, m_0, mu_o, mu_w) -> field(dtype=f32, shape=(Nx, Ny)):
+def calc_saturation(S, p, k, m, m_0, mu_o, mu_w) -> field(dtype=default_type, shape=(Nx, Ny)):
     """
     Вычисление водонасыщенности по явной схеме.
     """
